@@ -1,26 +1,226 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   Dupla · tokens de diseño
+   Dirección A — "Río de la Plata" (serif editorial cálida)
+   Los tokens están desacoplados: para cambiar de dirección se
+   editan solo las variables de :root / .dark
+   ============================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f6efe3;
+  --surface: #fffaf1;
+  --surface-2: #efe5d2;
+  --ink: #221a12;
+  --sub: #7c6d59;
+  --faint: #a99a84;
+  --line: #e5d8c2;
+  --ars: #e06a2f;
+  --ars-strong: #c24f1a;
+  --ars-soft: rgba(224, 106, 47, 0.14);
+  --usd: #3c6fa8;
+  --usd-strong: #2c5485;
+  --usd-soft: rgba(60, 111, 168, 0.14);
+  --danger: #cf4a3a;
+  --ok: #4c9a62;
+}
+
+.dark {
+  --bg: #171310;
+  --surface: #201a15;
+  --surface-2: #2a231c;
+  --ink: #f3e9d8;
+  --sub: #a2947f;
+  --faint: #6f6351;
+  --line: #33291f;
+  --ars: #f2a34d;
+  --ars-strong: #ffb45e;
+  --ars-soft: rgba(242, 163, 77, 0.16);
+  --usd: #8fb4e8;
+  --usd-strong: #a9c6f0;
+  --usd-soft: rgba(143, 180, 232, 0.16);
+  --danger: #e5766a;
+  --ok: #74c68a;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-sub: var(--sub);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-ars: var(--ars);
+  --color-ars-strong: var(--ars-strong);
+  --color-ars-soft: var(--ars-soft);
+  --color-usd: var(--usd);
+  --color-usd-strong: var(--usd-strong);
+  --color-usd-soft: var(--usd-soft);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+::selection {
+  background: var(--ars);
+  color: var(--bg);
+}
+
+/* Scrollbar sutil */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ============================================================
+   Micro-interacciones
+   ============================================================ */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(56px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  60% {
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@keyframes spin-soft {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+@keyframes check-pop {
+  0% {
+    transform: scale(0.4) rotate(-12deg);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.12) rotate(2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.anim-fade-up {
+  animation: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.anim-fade-in {
+  animation: fade-in 0.3s ease both;
+}
+.anim-sheet-up {
+  animation: sheet-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.anim-pop-in {
+  animation: pop-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.anim-check-pop {
+  animation: check-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.pulse-ring {
+  animation: pulse-ring 1.4s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
