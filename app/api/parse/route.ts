@@ -20,17 +20,17 @@ export async function POST(request: NextRequest) {
 
     const ahora = body.ahora && !isNaN(Date.parse(body.ahora)) ? body.ahora : new Date().toISOString();
     console.log("[parse] texto recibido:", JSON.stringify(texto));
-    const gasto = await parsearTextoATexto(texto, ahora);
-    console.log("[parse] resultado:", JSON.stringify(gasto));
+    const gastos = await parsearTextoATexto(texto, ahora);
+    console.log("[parse] resultado:", JSON.stringify(gastos));
 
-    if (!gasto) {
+    if (gastos.length === 0) {
       return NextResponse.json(
         { error: "No escuché un gasto claro", texto },
         { status: 422 }
       );
     }
 
-    return NextResponse.json({ gasto, texto });
+    return NextResponse.json({ gastos, texto });
   } catch (error) {
     console.error("Error en /api/parse", error);
     return NextResponse.json(

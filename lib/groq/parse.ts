@@ -9,18 +9,24 @@ Sos Dupla, la compañera de gastos de una persona argentina que maneja dos moned
 
 Convertís frases habladas y coloquiales sobre plata en un JSON con esta forma EXACTA:
 {
-  "tipo": "gasto" | "ingreso",
-  "monto": number,
-  "moneda": "ARS" | "USD",
-  "categoria": string,
-  "descripcion": string,
-  "fecha": string  // ISO 8601 con hora, ej: "2026-08-06T14:30:00.000Z"
+  "movimientos": [
+    {
+      "tipo": "gasto" | "ingreso",
+      "monto": number,
+      "moneda": "ARS" | "USD",
+      "categoria": string,
+      "descripcion": string,
+      "fecha": string  // ISO 8601 con hora, ej: "2026-08-06T14:30:00.000Z"
+    }
+  ]
 }
 
 Reglas:
+- Si la frase menciona DOS O MÁS gastos o ingresos (ej: "gasté 8 mil en el súper y 5 mil en el cine", "compré pan y un helado", "cobré el sueldo y pagué el alquiler"), devolvé UN objeto en "movimientos" por cada uno, separados y completos. NUNCA combines montos ni descripciones con "y" ni los sumes en un solo movimiento.
+- Si un solo movimiento tiene varios montos (ej: "gasté 8 mil en el súper y 5 mil en el cine"), cada monto va en su propio movimiento.
 - "tipo": "gasto" si es dinero que sale (gasté, pagué, compré, compramos, me cobraron, pagamos, mercado pago me descontó). "ingreso" si es dinero que entra (gané, cobré, recibí, me pagaron, me depositaron, me acreditaron, me llegó, vendí, sueldo, salario, aguinaldo, beca, regalo).
 - "monto" SIEMPRE es un número positivo. Nunca strings.
-- Si la frase NO contiene un gasto ni un ingreso (saludos, preguntas, agradecimientos, ruido, música), devolvé {"tipo": "gasto", "monto": 0, "categoria": "Otros", "descripcion": ""}. NUNCA inventes un monto.
+- Si la frase NO contiene un gasto ni un ingreso (saludos, preguntas, agradecimientos, ruido, música), devolvé {"movimientos": []}. NUNCA inventes un monto.
 - Interpretá las monedas: "pesos", "$", "plata", "lucas", "mangos", "8000" -> ARS. "dólares", "usd", "dolares", "verdes", "green", "u$s" -> USD.
 - "mil" = 1000, "lucas" = mil, "palos" = millón. "8 mil" = 8000, "dos mil quinientos" = 2500, "15 dolares" = 15 USD.
 - Elegí la categoría más cercana de esta lista fija: Supermercado, Comida y bares, Transporte, Vivienda, Servicios, Salud, Entretenimiento, Suscripciones, Educación, Otros.
@@ -42,7 +48,7 @@ Reglas:
 export async function parsearTextoATexto(
   texto: string,
   ahora: string
-): Promise<GastoParseado | null> {
+): Promise<GastoParseado[]> {
   const mensajes: { role: "system" | "user" | "assistant"; content: string }[] = [
     { role: "system", content: SISTEMA },
     {
@@ -54,31 +60,53 @@ export async function parsearTextoATexto(
   const hayNumero = /\d/.test(texto);
 
   let resultado = await groqChatJson(mensajes);
-  const primero = normalizarGastoParseado(resultado, ahora);
-  if (primero) return primero;
+  const movimientos = normalizarMovimientos(resultado, ahora);
+  if (movimientos.length > 0) return movimientos;
 
-  if (!hayNumero) return null;
+  if (!hayNumero) return [];
 
   console.error(
-    "Parseo sin monto pero el texto tiene números. Respuesta cruda:",
+    "Parseo sin movimientos pero el texto tiene números. Respuesta cruda:",
     JSON.stringify(resultado)
   );
   mensajes.push({ role: "assistant", content: JSON.stringify(resultado) });
   mensajes.push({
     role: "user",
     content:
-      "La frase parece contener un gasto pero no devolviste un monto válido. monto debe ser SOLO un número (ej: 8000, 15.5), sin palabras ni símbolos. Si la frase realmente no tiene un gasto, devolvé monto: 0.",
+      "La frase parece contener gastos o ingresos pero no devolviste montos válidos. monto debe ser SOLO un número (ej: 8000, 15.5), sin palabras ni símbolos. Si la frase realmente no tiene movimientos, devolvé {\"movimientos\": []}.",
   });
   resultado = await groqChatJson(mensajes);
-  return normalizarGastoParseado(resultado, ahora);
+  return normalizarMovimientos(resultado, ahora);
 }
 
-function normalizarGastoParseado(
+function normalizarMovimientos(
+  bruto: unknown,
+  ahora: string
+): GastoParseado[] {
+  if (typeof bruto !== "object" || bruto === null) {
+    throw new Error("Formato inesperado del parseo");
+  }
+  let lista: unknown[];
+  const r = bruto as Record<string, unknown>;
+  if (Array.isArray(bruto)) lista = bruto;
+  else if (Array.isArray(r.movimientos)) lista = r.movimientos;
+  else if (r.gasto) lista = [r.gasto];
+  else lista = [r];
+
+  const resultado: GastoParseado[] = [];
+  for (const item of lista) {
+    const g = normalizarUno(item, ahora);
+    if (g) resultado.push(g);
+  }
+  return resultado;
+}
+
+function normalizarUno(
   bruto: unknown,
   ahora: string
 ): GastoParseado | null {
   if (typeof bruto !== "object" || bruto === null) {
-    throw new Error("Formato inesperado del parseo");
+    return null;
   }
   let r = bruto as Record<string, unknown>;
   if (typeof r.gasto === "object" && r.gasto !== null) {
