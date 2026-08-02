@@ -2,10 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Gasto, Moneda, Tipo } from "@/lib/types";
-import { formatARS, formatUSD, formatMonto } from "@/lib/utils";
+import {
+  formatARS,
+  formatUSD,
+  formatMonto,
+} from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 type Saldo = { ARS: number; USD: number };
+type Cotizacion = { venta: number; compra: number; fecha: string };
 
 function montoDelMes(gastos: Gasto[], moneda: Moneda, tipo: Tipo): number {
   const ahora = new Date();
@@ -20,11 +25,19 @@ function montoDelMes(gastos: Gasto[], moneda: Moneda, tipo: Tipo): number {
     .reduce((acc, g) => acc + Number(g.monto), 0);
 }
 
+type DatosMoneda = {
+  saldoActual: number;
+  gastado: number;
+  ingresado: number;
+  total: number;
+};
+
 export function Patrimonio({ gastos }: { gastos: Gasto[] }) {
   const [saldo, setSaldo] = useState<Saldo>({ ARS: 0, USD: 0 });
-  const [editando, setEditando] = useState<Moneda | null>(null);
-  const [borrador, setBorrador] = useState("");
+  const [cotizacion, setCotizacion] = useState<Cotizacion | null>(null);
+  const [refrescando, setRefrescando] = useState(false);
   const cargadoRef = useRef(false);
+  const cotizacionCargadaRef = useRef(false);
 
   useEffect(() => {
     if (cargadoRef.current) return;
@@ -37,27 +50,58 @@ export function Patrimonio({ gastos }: { gastos: Gasto[] }) {
       .catch(() => {});
   }, []);
 
-  const guardar = useCallback(async (moneda: Moneda) => {
-    const valor = Number(borrador.replace(/[^0-9.]/g, ""));
-    if (Number.isFinite(valor) && valor >= 0) {
-      setSaldo((s) => ({ ...s, [moneda]: valor }));
-      await fetch(`/api/patrimonio?moneda=${moneda}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ saldo: valor }),
-      });
+  const cargarCotizacion = useCallback(async (fuerza?: boolean) => {
+    setRefrescando(true);
+    try {
+      const res = await fetch(
+        `/api/cotizacion${fuerza ? `?r=${Date.now()}` : ""}`,
+        { cache: "no-store" }
+      );
+      if (!res.ok) throw new Error("fallo");
+      const data = (await res.json()) as Cotizacion;
+      if (typeof data.venta === "number") setCotizacion(data);
+    } catch {
+      // sin cotización se muestra degradado
+    } finally {
+      setRefrescando(false);
     }
-    setEditando(null);
-  }, [borrador]);
+  }, []);
 
-  const tarjeta = (moneda: Moneda, saldoActual: number) => {
+  useEffect(() => {
+    if (cotizacionCargadaRef.current) return;
+    cotizacionCargadaRef.current = true;
+    void cargarCotizacion();
+  }, [cargarCotizacion]);
+
+  const datosMoneda = useCallback(
+    (moneda: Moneda): DatosMoneda => {
+      const saldoActual = saldo[moneda];
+      const gastado = montoDelMes(gastos, moneda, "gasto");
+      const ingresado = montoDelMes(gastos, moneda, "ingreso");
+      return {
+        saldoActual,
+        gastado,
+        ingresado,
+        total: saldoActual + ingresado - gastado,
+      };
+    },
+    [saldo, gastos]
+  );
+
+  const totalARS = datosMoneda("ARS").total;
+  const totalUSD = datosMoneda("USD").total;
+  const patrimonioCombinado = cotizacion
+    ? totalARS + totalUSD * cotizacion.venta
+    : null;
+
+  const tarjeta = (moneda: Moneda, d: DatosMoneda) => {
     const esArs = moneda === "ARS";
-    const gastado = montoDelMes(gastos, moneda, "gasto");
-    const ingresado = montoDelMes(gastos, moneda, "ingreso");
+    const { gastado, ingresado, total } = d;
+    const enRojo = total < 0;
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-3xl border p-5 transition-all duration-300",
+          "relative min-w-0 w-[80%] shrink-0 snap-center overflow-hidden rounded-3xl border p-5 transition-all duration-300 lg:w-auto [scroll-snap-stop:always]",
           esArs
             ? "border-ars/30 bg-ars-soft"
             : "border-usd/30 bg-usd-soft"
@@ -72,45 +116,20 @@ export function Patrimonio({ gastos }: { gastos: Gasto[] }) {
           >
             {esArs ? "$ PESOS" : "U$S DÓLARES"}
           </span>
-          <button
-            type="button"
-            aria-label={`Editar saldo en ${esArs ? "pesos" : "dólares"}`}
-            onClick={() => {
-              setEditando(moneda);
-              setBorrador(String(saldoActual));
-            }}
-            className="text-sub transition-colors hover:text-ink"
-          >
-            <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
         </div>
 
-        {editando === moneda ? (
-          <div className="mt-3 flex items-center gap-2">
-            <input
-              autoFocus
-              value={borrador}
-              onChange={(e) => setBorrador(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") guardar(moneda);
-                if (e.key === "Escape") setEditando(null);
-              }}
-              inputMode="decimal"
-              className="w-full rounded-xl border border-line bg-surface px-3 py-2 font-display text-2xl font-semibold tracking-tight text-ink outline-none focus:border-ars"
-            />
-            <button
-              type="button"
-              onClick={() => guardar(moneda)}
-              className="rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-bg"
-            >
-              OK
-            </button>
-          </div>
-        ) : (
-          <p className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink tabular-nums">
-            {esArs ? formatARS(saldoActual) : formatUSD(saldoActual)}
+        <p
+          className={cn(
+            "mt-2 font-display text-4xl font-semibold tracking-tight tabular-nums",
+            enRojo ? "text-danger" : "text-ink"
+          )}
+        >
+          {esArs ? formatARS(total) : formatUSD(total)}
+        </p>
+
+        {enRojo && (
+          <p className="anim-fade-in mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-danger/15 px-2.5 py-0.5 text-xs font-semibold text-danger">
+            <span aria-hidden>▼</span> estás en rojo este mes
           </p>
         )}
 
@@ -143,9 +162,57 @@ export function Patrimonio({ gastos }: { gastos: Gasto[] }) {
 
   return (
     <section className="anim-fade-up">
-      <div className="grid gap-4 sm:grid-cols-2">
-        {tarjeta("ARS", saldo.ARS)}
-        {tarjeta("USD", saldo.USD)}
+      <div className="mb-4 rounded-2xl border border-line bg-surface px-5 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-sub">
+            Patrimonio total
+          </p>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => void cargarCotizacion(true)}
+              disabled={refrescando}
+              aria-label="Actualizar cotización del dólar"
+              className="grid size-7 cursor-pointer place-items-center rounded-full text-sub transition-colors hover:bg-surface-2 hover:text-ink disabled:cursor-default disabled:opacity-50"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className={cn("size-4", refrescando && "animate-spin")}
+                style={refrescando ? { animation: "spin-soft 0.8s linear infinite" } : undefined}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4h-4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <span className="text-xs font-medium text-sub">Dólar oficial</span>
+            {cotizacion ? (
+              <span className="font-mono text-sm font-semibold tabular-nums text-usd-strong">
+                {formatARS(cotizacion.venta)}
+              </span>
+            ) : (
+              <span className="font-mono text-sm text-faint">—</span>
+            )}
+          </div>
+        </div>
+        {patrimonioCombinado !== null ? (
+          <p className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-ink tabular-nums">
+            {formatARS(patrimonioCombinado)}
+          </p>
+        ) : (
+          <p className="mt-1.5 text-sm text-faint">
+            Sin cotización para combinar
+          </p>
+        )}
+        <p className="mt-1 text-[11px] text-faint">
+          combinando pesos y dólares al oficial
+        </p>
+      </div>
+
+      <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 no-scrollbar lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0">
+        {tarjeta("ARS", datosMoneda("ARS"))}
+        {tarjeta("USD", datosMoneda("USD"))}
       </div>
     </section>
   );
