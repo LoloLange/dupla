@@ -40,6 +40,7 @@ export function useGastos() {
     async (datos: {
       monto: number;
       moneda: "ARS" | "USD";
+      tipo: "gasto" | "ingreso";
       categoria: string;
       descripcion: string;
       fecha: string;
@@ -65,6 +66,36 @@ export function useGastos() {
     []
   );
 
+  const actualizar = useCallback(
+    async (
+      id: string,
+      datos: {
+        monto: number;
+        moneda: "ARS" | "USD";
+        tipo: "gasto" | "ingreso";
+        categoria: string;
+        descripcion: string;
+        fecha: string;
+      }
+    ): Promise<Gasto> => {
+      const res = await fetch(`/api/gastos?id=${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datos),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(data?.error ?? "No se pudo actualizar el gasto");
+      }
+      const data = (await res.json()) as { gasto: Gasto };
+      setGastos((prev) => prev.map((g) => (g.id === id ? data.gasto : g)));
+      return data.gasto;
+    },
+    []
+  );
+
   const eliminar = useCallback(async (id: string) => {
     setGastos((prev) => prev.filter((g) => g.id !== id));
     await fetch(`/api/gastos?id=${encodeURIComponent(id)}`, {
@@ -72,5 +103,14 @@ export function useGastos() {
     });
   }, []);
 
-  return { gastos, cargando, error, refrescar, crear, eliminar, agregar };
+  return {
+    gastos,
+    cargando,
+    error,
+    refrescar,
+    crear,
+    actualizar,
+    eliminar,
+    agregar,
+  };
 }

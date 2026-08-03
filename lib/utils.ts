@@ -40,6 +40,29 @@ export function formatARSCompacto(monto: number): string {
   return `${signo}$${abs.toLocaleString("es-AR")}`;
 }
 
+export function aInicioDiaLocal(fecha: Date): Date {
+  return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+}
+
+export function diffDias(iso: string): number {
+  const hoy = aInicioDiaLocal(new Date());
+  const dia = aInicioDiaLocal(new Date(iso));
+  return Math.round((hoy.getTime() - dia.getTime()) / 86_400_000);
+}
+
+export function formatDiaGrupo(iso: string): string {
+  const diff = diffDias(iso);
+  if (diff <= 0) return "Hoy";
+  if (diff === 1) return "Ayer";
+  if (diff <= 6) {
+    const nombre = new Date(iso).toLocaleDateString("es-AR", {
+      weekday: "long",
+    });
+    return nombre.charAt(0).toUpperCase() + nombre.slice(1);
+  }
+  return formatFechaCorta(iso);
+}
+
 export function formatFechaCorta(iso: string): string {
   const fecha = new Date(iso);
   const hoy = new Date();

@@ -145,6 +145,10 @@ export function useVoiceRecorder() {
     };
   }, []);
 
+  const limpiarError = useCallback(() => {
+    setError(null);
+  }, []);
+
   return {
     estado,
     duracion,
@@ -152,5 +156,6 @@ export function useVoiceRecorder() {
     error,
     empezarGrabacion,
     detenerGrabacion,
+    limpiarError,
   };
 }

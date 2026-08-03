@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GastoParseado, Moneda, Tipo } from "@/lib/types";
 import { CATEGORIAS, esCategoria } from "@/lib/types";
 import { cn, formatMonto } from "@/lib/utils";
@@ -10,8 +10,8 @@ type Fase = "edit" | "saving" | "done";
 
 type Props = {
   abierto: boolean;
-  gasto: GastoParseado | null;
-  onConfirm: (gasto: GastoParseado) => Promise<void>;
+  gasto: (GastoParseado & { id?: string }) | null;
+  onConfirm: (gasto: GastoParseado & { id?: string }) => Promise<void>;
   onCancel: () => void;
   onDone: () => void;
 };
@@ -38,24 +38,76 @@ export function ExpenseConfirmSheet({
   );
   const [descripcion, setDescripcion] = useState(() => gasto?.descripcion ?? "");
   const [fecha, setFecha] = useState(() =>
-    gasto ? aDatetimeLocal(gasto.fecha) : ""
+    gasto ? aDatetimeLocal(gasto.fecha) : aDatetimeLocal(new Date().toISOString())
   );
   const [fase, setFase] = useState<Fase>("edit");
   const [error, setError] = useState<string | null>(null);
+  const [cerrando, setCerrando] = useState(false);
+  const [arrastre, setArrastre] = useState(0);
+  const [dragActivo, setDragActivo] = useState(false);
+  const [saliendoArrastre, setSaliendoArrastre] = useState(false);
+  const dragInicioRef = useRef<number | null>(null);
+  const arrastreRef = useRef(0);
+
+  const salir = useCallback(
+    (cb: () => void) => {
+      if (cerrando) return;
+      setCerrando(true);
+      window.setTimeout(cb, 320);
+    },
+    [cerrando]
+  );
+
+  const empezarArrastre = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (fase !== "edit" || e.pointerType !== "touch") return;
+      dragInicioRef.current = e.clientY;
+      setDragActivo(true);
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    },
+    [fase]
+  );
+
+  const moverArrastre = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragInicioRef.current == null) return;
+    const siguiente = Math.max(0, e.clientY - dragInicioRef.current);
+    arrastreRef.current = siguiente;
+    setArrastre(siguiente);
+  }, []);
+
+  const soltarArrastre = useCallback(() => {
+    if (dragInicioRef.current == null) return;
+    dragInicioRef.current = null;
+    const desplazado = arrastreRef.current;
+    arrastreRef.current = 0;
+    if (desplazado > 96) {
+      setSaliendoArrastre(true);
+      setDragActivo(false);
+      setArrastre(window.innerHeight);
+      window.setTimeout(() => {
+        setArrastre(0);
+        setSaliendoArrastre(false);
+        onCancel();
+      }, 320);
+    } else {
+      setDragActivo(false);
+      setArrastre(0);
+    }
+  }, [onCancel]);
 
   useEffect(() => {
     if (!abierto) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && fase === "edit") onCancel();
+      if (e.key === "Escape" && fase === "edit") salir(onCancel);
     };
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [abierto, fase, onCancel]);
+  }, [abierto, fase, salir, onCancel]);
 
   const montoNumerico = useMemo(() => {
     const n = Number(monto.replace(/[^0-9.,]/g, "").replace(",", "."));
@@ -74,9 +126,10 @@ export function ExpenseConfirmSheet({
         categoria,
         descripcion: descripcion.trim() || categoria,
         fecha: new Date(fecha || Date.now()).toISOString(),
+        ...(gasto?.id ? { id: gasto.id } : {}),
       });
       setFase("done");
-      window.setTimeout(onDone, 1500);
+      window.setTimeout(() => salir(onDone), 1200);
     } catch (e) {
       console.error("Error guardando movimiento:", e);
       setError(
@@ -84,20 +137,47 @@ export function ExpenseConfirmSheet({
       );
       setFase("edit");
     }
-  }, [montoNumerico, moneda, tipo, categoria, descripcion, fecha, fase, onConfirm, onDone]);
+  }, [montoNumerico, moneda, tipo, categoria, descripcion, fecha, fase, gasto, onConfirm, onDone, salir]);
 
-  if (!abierto || !gasto) return null;
+  if (!abierto) return null;
+
+  const esManual = !gasto;
+  const editando = !!gasto?.id;
 
   return (
     <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">
       <div
-        className="anim-fade-in absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={() => fase === "edit" && onCancel()}
+        className={cn(
+          "absolute inset-0 bg-black/60 backdrop-blur-sm",
+          cerrando || saliendoArrastre ? "anim-fade-out" : "anim-fade-in"
+        )}
+        onClick={() => fase === "edit" && salir(onCancel)}
       />
 
-      <div className="absolute inset-x-0 bottom-0 mx-auto max-w-md">
-        <div className="anim-sheet-up rounded-t-3xl border-t border-line bg-surface px-6 pb-8 pt-3 shadow-2xl">
-          <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-line" />
+      <div
+        className={cn(
+          "absolute inset-x-0 bottom-0 mx-auto max-w-md lg:inset-0 lg:flex lg:w-full lg:max-w-none lg:items-center lg:justify-center lg:px-6",
+          dragActivo ? "transition-none" : "transition-transform duration-300 ease-out"
+        )}
+        style={arrastre > 0 ? { transform: `translateY(${arrastre}px)` } : undefined}
+      >
+        <div
+          className={cn(
+            "max-h-[92dvh] overflow-y-auto rounded-t-3xl border-t border-line bg-surface px-6 pb-8 pt-3 shadow-2xl no-scrollbar lg:max-h-none lg:overflow-visible lg:w-full lg:max-w-lg lg:rounded-3xl lg:border lg:px-8 lg:pb-9 lg:pt-6",
+            cerrando ? "anim-sheet-down lg:anim-pop-out" : "anim-sheet-up lg:anim-pop-in"
+          )}
+        >
+          <div
+            onPointerDown={empezarArrastre}
+            onPointerMove={moverArrastre}
+            onPointerUp={soltarArrastre}
+            onPointerCancel={soltarArrastre}
+            style={{ touchAction: "none" }}
+            aria-hidden
+            className="mx-auto mb-5 grid h-6 w-16 cursor-grab touch-none place-items-center active:cursor-grabbing lg:hidden"
+          >
+            <span className="block h-1.5 w-12 rounded-full bg-line" />
+          </div>
 
           {fase === "done" ? (
             <div className="anim-pop-in flex flex-col items-center gap-4 py-10">
@@ -105,7 +185,7 @@ export function ExpenseConfirmSheet({
                 <Checkmark className="size-14" />
               </span>
               <p className="font-display text-2xl font-medium tracking-tight text-ink">
-                ¡Anotado!
+                {editando ? "¡Actualizado!" : "¡Anotado!"}
               </p>
               <p className="text-sub">
                 {formatMonto(montoNumerico ?? 0, moneda)} · {descripcion}
@@ -113,18 +193,41 @@ export function ExpenseConfirmSheet({
             </div>
           ) : (
             <div className="anim-fade-up">
-              <div className="mb-1 flex items-start justify-between">
+              <div className="mb-1 flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium text-sub">Dupla escuchó</p>
+                  {!esManual && !editando && (
+                    <p className="text-sm font-medium text-sub">
+                      Dupla escuchó
+                    </p>
+                  )}
                   <h2 className="font-display text-2xl font-medium tracking-tight text-ink">
-                    {tipo === "ingreso"
-                      ? "¿Confirmás este ingreso?"
-                      : "¿Confirmás este gasto?"}
+                    {editando
+                      ? "Editar movimiento"
+                      : esManual
+                        ? "Cargar un movimiento"
+                        : tipo === "ingreso"
+                          ? "¿Confirmás este ingreso?"
+                          : "¿Confirmás este gasto?"}
                   </h2>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => salir(onCancel)}
+                  disabled={fase === "saving"}
+                  aria-label="Cerrar"
+                  className="hidden size-9 shrink-0 cursor-pointer place-items-center rounded-full border border-line text-sub transition-colors hover:bg-surface-2 hover:text-ink lg:grid"
+                >
+                  <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+                  </svg>
+                </button>
               </div>
               <p className="mb-5 text-sm text-sub">
-                Tocá lo que entendió mal y corregilo.
+                {editando
+                  ? "Corregí lo que quieras y guardá los cambios."
+                  : esManual
+                    ? "Completá los datos y guardalo."
+                    : "Tocá lo que entendió mal y corregilo."}
               </p>
 
               <div className="mb-4 flex rounded-2xl bg-surface-2 p-1.5">
@@ -134,7 +237,7 @@ export function ExpenseConfirmSheet({
                     type="button"
                     onClick={() => setTipo(t)}
                     className={cn(
-                      "flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition-all",
+                      "flex-1 cursor-pointer rounded-xl px-4 py-2 text-sm font-semibold transition-all",
                       tipo === t
                         ? t === "ingreso"
                           ? "bg-ok text-white shadow"
@@ -155,7 +258,7 @@ export function ExpenseConfirmSheet({
                       type="button"
                       onClick={() => setMoneda(m)}
                       className={cn(
-                        "rounded-xl px-4 py-2 font-mono text-sm font-semibold transition-all",
+                        "cursor-pointer rounded-xl px-4 py-2 font-mono text-sm font-semibold transition-all",
                         moneda === m
                           ? m === "ARS"
                             ? "bg-ars text-white shadow"
@@ -192,14 +295,14 @@ export function ExpenseConfirmSheet({
                 <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-sub">
                   Categoría
                 </span>
-                <div className="flex gap-2 overflow-x-auto pb-1">
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                   {CATEGORIAS.map((c) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setCategoria(c)}
                       className={cn(
-                        "shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm transition-all",
+                        "shrink-0 cursor-pointer whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm transition-all",
                         categoria === c
                           ? "border-ink bg-ink text-bg"
                           : "border-line text-sub hover:border-ink hover:text-ink"
@@ -232,9 +335,9 @@ export function ExpenseConfirmSheet({
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={onCancel}
+                  onClick={() => salir(onCancel)}
                   disabled={fase === "saving"}
-                  className="flex-1 rounded-2xl border border-line py-3.5 font-medium text-sub transition-colors hover:text-ink"
+                  className="flex-1 cursor-pointer rounded-2xl border border-line py-3.5 font-medium text-sub transition-colors hover:bg-surface-2 hover:text-ink disabled:cursor-default disabled:opacity-50"
                 >
                   Descartar
                 </button>
@@ -243,7 +346,7 @@ export function ExpenseConfirmSheet({
                   onClick={confirmar}
                   disabled={!montoNumerico || fase === "saving"}
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-2 rounded-2xl py-3.5 font-semibold text-white shadow-lg transition-all hover:brightness-105 active:scale-[0.98] disabled:opacity-50",
+                    "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-2xl py-3.5 font-semibold text-white shadow-lg transition-all hover:brightness-105 active:scale-[0.98] disabled:cursor-default disabled:opacity-50",
                     tipo === "ingreso"
                       ? "bg-ok shadow-ok/25"
                       : "bg-ars shadow-ars/25"
@@ -257,6 +360,8 @@ export function ExpenseConfirmSheet({
                       />
                       Guardando…
                     </>
+                  ) : editando ? (
+                    "Guardar cambios"
                   ) : tipo === "ingreso" ? (
                     "Confirmar ingreso"
                   ) : (
