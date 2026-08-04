@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Gasto, Categoria } from "@/lib/types";
 import { aInicioDiaLocal, formatDiaGrupo, formatHora, formatMonto } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { ThinkingOrb } from "thinking-orbs";
+import { buscarLogo, cargarLogos, rutaLogo, type LogoApp, type LogoListo } from "@/lib/svgl";
 
 const ICONOS: Record<Categoria, string> = {
   Supermercado: "🛒",
@@ -36,6 +37,29 @@ export function UltimosGastos({
   onEditar: (gasto: Gasto) => void;
   onAñadirManual?: () => void;
 }) {
+  const [logos, setLogos] = useState<LogoListo[] | null>(null);
+
+  useEffect(() => {
+    let activo = true;
+    cargarLogos()
+      .then((l) => {
+        if (activo) setLogos(l);
+      })
+      .catch(() => {});
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  const logosPorGasto = useMemo(() => {
+    if (!logos) return null;
+    const mapa = new Map<string, LogoApp | null>();
+    for (const g of gastos) {
+      mapa.set(g.id, buscarLogo(g.descripcion || g.categoria, logos));
+    }
+    return mapa;
+  }, [gastos, logos]);
+
   const grupos = useMemo(() => {
     const mapa = new Map<number, Gasto[]>();
     for (const g of gastos) {
@@ -123,7 +147,9 @@ export function UltimosGastos({
               {formatDiaGrupo(clave)}
             </p>
             <div className="overflow-hidden rounded-3xl border border-line bg-surface">
-              {lista.map((gasto, i) => (
+              {lista.map((gasto, i) => {
+                const logo = logosPorGasto?.get(gasto.id) ?? null;
+                return (
                 <div
                   key={gasto.id}
                   onClick={() => onEditar(gasto)}
@@ -137,7 +163,17 @@ export function UltimosGastos({
                   )}
                 >
                   <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-2xl bg-surface-2 text-lg">
-                    {iconoCategoria(gasto.categoria)}
+                    {logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- SVG remoto sin reoptimizar (next/image no procesa svg)
+                      <img
+                        src={rutaLogo(logo.route)}
+                        alt={logo.title}
+                        loading="lazy"
+                        className="size-6 object-contain"
+                      />
+                    ) : (
+                      iconoCategoria(gasto.categoria)
+                    )}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-ink">
@@ -176,7 +212,8 @@ export function UltimosGastos({
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
