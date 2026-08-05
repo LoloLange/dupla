@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { ThemeToggle } from "@/components/ThemeProvider";
 
 type Paso = "email" | "codigo";
 
@@ -55,6 +56,10 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-6">
+      <div className="fixed right-4 top-4 z-10">
+        <ThemeToggle />
+      </div>
+
       <div className="anim-fade-up">
         <p className="font-display text-4xl font-semibold tracking-tight text-ink">
           dupla
