@@ -91,7 +91,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={enviarCodigo}
                 disabled={enviando}
-                className="w-full rounded-2xl bg-ars py-3.5 font-semibold text-white shadow-lg shadow-ars/25 transition-all hover:brightness-105 active:scale-[0.99] disabled:opacity-50"
+                className="w-full cursor-pointer rounded-2xl bg-ars py-3.5 font-semibold text-white shadow-lg shadow-ars/25 transition-all hover:brightness-105 active:scale-[0.99] disabled:cursor-default disabled:opacity-50"
               >
                 {enviando ? "Enviando…" : "Continuar"}
               </button>
@@ -112,14 +112,14 @@ export default function LoginPage() {
                 type="button"
                 onClick={verificarCodigo}
                 disabled={enviando}
-                className="w-full rounded-2xl bg-ars py-3.5 font-semibold text-white shadow-lg shadow-ars/25 transition-all hover:brightness-105 active:scale-[0.99] disabled:opacity-50"
+                className="w-full cursor-pointer rounded-2xl bg-ars py-3.5 font-semibold text-white shadow-lg shadow-ars/25 transition-all hover:brightness-105 active:scale-[0.99] disabled:cursor-default disabled:opacity-50"
               >
                 {enviando ? "Verificando…" : "Entrar"}
               </button>
               <button
                 type="button"
                 onClick={() => setPaso("email")}
-                className="w-full text-center text-sm text-sub hover:text-ink"
+                className="w-full cursor-pointer text-center text-sm text-sub transition-colors hover:text-ink"
               >
                 Usar otro email
               </button>

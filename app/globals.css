@@ -2,6 +2,13 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* ============================================================
    Dupla · tokens de diseño
    Dirección A — "Río de la Plata" (serif editorial cálida)
@@ -69,6 +76,7 @@
 
 html {
   color-scheme: dark;
+  overflow-x: clip;
 }
 
 html.light {
@@ -196,23 +204,145 @@ body {
   }
 }
 
+@keyframes halo-breath {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes breath {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.035);
+  }
+}
+
+@keyframes wave {
+  0% {
+    transform: scale(0.35);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+@keyframes ping-onda {
+  75%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-down {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(120%);
+  }
+}
+
+@keyframes pop-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.92) translateY(-14px);
+  }
+}
+
 .anim-fade-up {
   animation: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .anim-fade-in {
   animation: fade-in 0.3s ease both;
 }
+.anim-fade-out {
+  animation: fade-out 0.25s ease both;
+}
 .anim-sheet-up {
   animation: sheet-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+.anim-sheet-down {
+  animation: sheet-down 0.3s cubic-bezier(0.4, 0, 1, 1) both;
+}
 .anim-pop-in {
   animation: pop-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.anim-pop-out {
+  animation: pop-out 0.28s cubic-bezier(0.4, 0, 1, 1) both;
 }
 .anim-check-pop {
   animation: check-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .pulse-ring {
   animation: pulse-ring 1.4s ease-out infinite;
+}
+
+.halo-breath {
+  animation: halo-breath 4s ease-in-out infinite;
+}
+.ping-onda {
+  animation: ping-onda 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.wave {
+  animation: wave 1.4s ease-out infinite;
+}
+.idle-breath {
+  animation: breath 9s ease-in-out infinite;
+}
+
+@keyframes row-out {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+    max-height: var(--row-h, 120px);
+  }
+  30% {
+    opacity: 0;
+    transform: translateX(24px);
+    max-height: var(--row-h, 120px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(24px);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-width: 0;
+    margin: 0;
+  }
+}
+
+.anim-row-out {
+  animation: row-out 0.34s ease-in both;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

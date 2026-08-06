@@ -38,6 +38,29 @@ export function UltimosGastos({
   onAñadirManual?: () => void;
 }) {
   const [logos, setLogos] = useState<LogoListo[] | null>(null);
+  const [saliendo, setSaliendo] = useState<string | null>(null);
+  const filasRef = useRef<Map<string, HTMLDivElement | null>>(new Map());
+
+  const setFilaRef =
+    (id: string) =>
+    (el: HTMLDivElement | null) => {
+      if (el) filasRef.current.set(id, el);
+      else filasRef.current.delete(id);
+    };
+
+  const pedirEliminar = (id: string) => {
+    if (saliendo) return;
+    const fila = filasRef.current.get(id);
+    if (fila) {
+      const h = fila.offsetHeight;
+      fila.style.setProperty("--row-h", `${h}px`);
+    }
+    setSaliendo(id);
+    window.setTimeout(() => {
+      onEliminar(id);
+      setSaliendo(null);
+    }, 360);
+  };
 
   useEffect(() => {
     let activo = true;
@@ -109,7 +132,7 @@ export function UltimosGastos({
           <button
             type="button"
             onClick={onAñadirManual}
-            className="mt-6 flex items-center gap-1.5 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-bg transition-all hover:brightness-110 active:scale-[0.98]"
+            className="mt-6 flex cursor-pointer items-center gap-1.5 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-bg transition-all hover:brightness-110 active:scale-[0.98]"
           >
             <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 5v14M5 12h14" strokeLinecap="round" />
@@ -131,7 +154,7 @@ export function UltimosGastos({
           <button
             type="button"
             onClick={onAñadirManual}
-            className="flex items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium text-sub transition-colors hover:border-ink hover:text-ink"
+            className="flex cursor-pointer items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium text-sub transition-colors hover:border-ink hover:bg-surface-2 hover:text-ink"
           >
             <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 5v14M5 12h14" strokeLinecap="round" />
@@ -152,14 +175,19 @@ export function UltimosGastos({
                 return (
                 <div
                   key={gasto.id}
-                  onClick={() => onEditar(gasto)}
+                  ref={setFilaRef(gasto.id)}
+                  onClick={() => {
+                    if (saliendo) return;
+                    onEditar(gasto);
+                  }}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") onEditar(gasto);
+                    if (e.key === "Enter" && !saliendo) onEditar(gasto);
                   }}
                   tabIndex={0}
                   className={cn(
                     "group flex cursor-pointer items-center gap-3 px-4 py-3.5 outline-none transition-colors hover:bg-surface-2/50 focus-visible:bg-surface-2/50",
-                    i > 0 && "border-t border-line"
+                    i > 0 && "border-t border-line",
+                    saliendo === gasto.id && "anim-row-out"
                   )}
                 >
                   <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-2xl bg-surface-2 text-lg">
@@ -202,9 +230,9 @@ export function UltimosGastos({
                       aria-label="Eliminar gasto"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onEliminar(gasto.id);
+                        pedirEliminar(gasto.id);
                       }}
-                      className="grid size-8 place-items-center rounded-full text-faint transition-colors hover:bg-surface-2 hover:text-danger lg:opacity-0 lg:group-hover:opacity-100"
+                      className="grid size-8 cursor-pointer place-items-center rounded-full text-faint transition-colors hover:bg-surface-2 hover:text-danger lg:opacity-0 lg:group-hover:opacity-100"
                     >
                       <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" strokeLinecap="round" />
