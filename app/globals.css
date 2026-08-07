@@ -9,47 +9,43 @@
   }
 }
 
+@utility scrollbar-desktop {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  @media (min-width: 64rem) {
+    scrollbar-width: auto;
+    &::-webkit-scrollbar {
+      display: block;
+    }
+  }
+}
+
 /* ============================================================
    Dupla · tokens de diseño
    Dirección A — "Río de la Plata" (serif editorial cálida)
-   Los tokens están desacoplados: para cambiar de dirección se
-   editan solo las variables de :root / .dark
+   Los tokens de tema vienen de styles/themes.css (tweakcn).
+   Acá se derivan los tokens Dupla desde esos tokens base.
    ============================================================ */
 
-:root {
-  --bg: #f6efe3;
-  --surface: #fffaf1;
-  --surface-2: #efe5d2;
-  --ink: #221a12;
-  --sub: #7c6d59;
-  --faint: #a99a84;
-  --line: #e5d8c2;
-  --ars: #e06a2f;
-  --ars-strong: #c24f1a;
-  --ars-soft: rgba(224, 106, 47, 0.14);
-  --usd: #3c6fa8;
-  --usd-strong: #2c5485;
-  --usd-soft: rgba(60, 111, 168, 0.14);
-  --danger: #cf4a3a;
-  --ok: #4c9a62;
-}
-
-.dark {
-  --bg: #171310;
-  --surface: #201a15;
-  --surface-2: #2a231c;
-  --ink: #f3e9d8;
-  --sub: #a2947f;
-  --faint: #6f6351;
-  --line: #33291f;
-  --ars: #f2a34d;
-  --ars-strong: #ffb45e;
-  --ars-soft: rgba(242, 163, 77, 0.16);
-  --usd: #8fb4e8;
-  --usd-strong: #a9c6f0;
-  --usd-soft: rgba(143, 180, 232, 0.16);
-  --danger: #e5766a;
-  --ok: #74c68a;
+:root,
+[data-theme] {
+  --bg: var(--background);
+  --surface: var(--card);
+  --surface-2: var(--secondary);
+  --ink: var(--foreground);
+  --sub: var(--muted-foreground);
+  --faint: color-mix(in oklab, var(--muted-foreground) 72%, var(--background));
+  --line: var(--border);
+  --ars: var(--primary);
+  --ars-strong: var(--ring);
+  --ars-soft: color-mix(in oklab, var(--primary) 15%, transparent);
+  --usd: var(--chart-2);
+  --usd-strong: color-mix(in oklab, var(--chart-2) 80%, var(--foreground));
+  --usd-soft: color-mix(in oklab, var(--chart-2) 15%, transparent);
+  --danger: var(--destructive);
+  --ok: var(--chart-3);
 }
 
 @theme inline {
@@ -68,7 +64,7 @@
   --color-usd-soft: var(--usd-soft);
   --color-danger: var(--danger);
   --color-ok: var(--ok);
-  --font-display: var(--font-display);
+  --font-display: var(--font-sans);
   --font-sans: var(--font-sans);
   --radius-2xl: 1.25rem;
   --radius-3xl: 1.75rem;
@@ -79,7 +75,11 @@ html {
   overflow-x: clip;
 }
 
-html.light {
+html[data-theme$="-dark"] {
+  color-scheme: dark;
+}
+
+html[data-theme$="-light"] {
   color-scheme: light;
 }
 
