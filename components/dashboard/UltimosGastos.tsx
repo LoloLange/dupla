@@ -1,28 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Gasto, Categoria } from "@/lib/types";
+import type { Gasto } from "@/lib/types";
 import { aInicioDiaLocal, formatDiaGrupo, formatHora, formatMonto } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { ThinkingOrb } from "thinking-orbs";
+import { emojiDeMovimiento } from "@/lib/categorias";
 import { buscarLogo, cargarLogos, rutaLogo, type LogoApp, type LogoListo } from "@/lib/svgl";
-
-const ICONOS: Record<Categoria, string> = {
-  Supermercado: "🛒",
-  "Comida y bares": "🍽️",
-  Transporte: "🚕",
-  Vivienda: "🏠",
-  Servicios: "💡",
-  Salud: "💊",
-  Entretenimiento: "🎬",
-  Suscripciones: "🔁",
-  Educación: "📚",
-  Otros: "✨",
-};
-
-function iconoCategoria(cat: string): string {
-  return ICONOS[cat as Categoria] ?? "✨";
-}
 
 export function UltimosGastos({
   gastos,
@@ -33,7 +17,7 @@ export function UltimosGastos({
 }: {
   gastos: Gasto[];
   cargando: boolean;
-  onEliminar: (id: string) => void;
+  onEliminar: (gasto: Gasto) => void;
   onEditar: (gasto: Gasto) => void;
   onAñadirManual?: () => void;
 }) {
@@ -57,7 +41,8 @@ export function UltimosGastos({
     }
     setSaliendo(id);
     window.setTimeout(() => {
-      onEliminar(id);
+      const gasto = gastos.find((g) => g.id === id);
+      if (gasto) onEliminar(gasto);
       setSaliendo(null);
     }, 360);
   };
@@ -200,7 +185,7 @@ export function UltimosGastos({
                         className="size-6 object-contain"
                       />
                     ) : (
-                      iconoCategoria(gasto.categoria)
+                      emojiDeMovimiento(gasto.categoria, gasto.descripcion)
                     )}
                   </span>
                   <div className="min-w-0 flex-1">

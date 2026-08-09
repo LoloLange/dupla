@@ -165,7 +165,7 @@ export function Patrimonio({ gastos }: { gastos: Gasto[] }) {
       <div className="mb-4 rounded-2xl border border-line bg-surface px-5 py-4">
         <div className="flex items-center justify-between gap-4">
           <p className="text-xs font-semibold uppercase tracking-widest text-sub">
-            Patrimonio total
+            Balance total
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
             <button

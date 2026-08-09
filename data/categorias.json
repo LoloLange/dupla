@@ -1,0 +1,254 @@
+{
+  "supermercado": {
+    "emoji": "🛒",
+    "keywords": ["super", "supermercado", "mercado", "almacen", "coto", "carrefour", "dia", "jumbo", "disco", "vea", "chino", "autoservicio", "changuito"]
+  },
+  "verduleria": {
+    "emoji": "🥬",
+    "keywords": ["verduleria", "verdura", "fruta", "frutas", "verduras"]
+  },
+  "carniceria": {
+    "emoji": "🥩",
+    "keywords": ["carniceria", "carne", "asado", "pollo", "milanesas", "achuras"]
+  },
+  "panaderia": {
+    "emoji": "🥐",
+    "keywords": ["panaderia", "pan", "facturas", "medialunas", "torta"]
+  },
+  "fiambreria": {
+    "emoji": "🧀",
+    "keywords": ["fiambreria", "fiambre", "queso", "jamon", "salame"]
+  },
+  "pescaderia": {
+    "emoji": "🐟",
+    "keywords": ["pescaderia", "pescado", "mariscos", "merluza"]
+  },
+  "dietetica": {
+    "emoji": "🌾",
+    "keywords": ["dietetica", "organico", "vegano", "suplementos", "proteina"]
+  },
+  "restaurante": {
+    "emoji": "🍽️",
+    "keywords": ["restaurante", "resto", "comida afuera", "cena afuera", "almuerzo afuera", "parrilla", "tenedor libre"]
+  },
+  "delivery": {
+    "emoji": "🛵",
+    "keywords": ["delivery", "pedidosya", "rappi", "glovo", "envio comida"]
+  },
+  "cafeteria": {
+    "emoji": "☕",
+    "keywords": ["cafe", "cafeteria", "bar", "capuccino", "medialuna con cafe"]
+  },
+  "fastfood": {
+    "emoji": "🍔",
+    "keywords": ["mcdonalds", "burger king", "hamburguesa", "pizza", "empanadas", "kentucky", "subway"]
+  },
+  "combustible": {
+    "emoji": "⛽",
+    "keywords": ["nafta", "combustible", "ypf", "shell", "axion", "puma", "gasoil", "gnc"]
+  },
+  "transporte_publico": {
+    "emoji": "🚇",
+    "keywords": ["subte", "colectivo", "tren", "sube", "carga sube", "transporte publico"]
+  },
+  "viajes_app": {
+    "emoji": "🚕",
+    "keywords": ["uber", "cabify", "remis", "taxi", "didi", "viaje"]
+  },
+  "estacionamiento": {
+    "emoji": "🅿️",
+    "keywords": ["estacionamiento", "cochera", "garage", "playa de estacionamiento"]
+  },
+  "peaje": {
+    "emoji": "🛣️",
+    "keywords": ["peaje", "autopista", "telepase"]
+  },
+  "auto": {
+    "emoji": "🔧",
+    "keywords": ["auto", "service", "mecanico", "taller", "cubiertas", "patente", "vtv", "seguro auto", "lavadero"]
+  },
+  "vivienda": {
+    "emoji": "🏠",
+    "keywords": ["alquiler", "expensas", "hipoteca", "inmobiliaria", "mudanza"]
+  },
+  "luz": {
+    "emoji": "💡",
+    "keywords": ["luz", "edenor", "edesur", "electricidad"]
+  },
+  "gas": {
+    "emoji": "🔥",
+    "keywords": ["gas", "metrogas", "garrafa"]
+  },
+  "agua": {
+    "emoji": "💧",
+    "keywords": ["agua", "aysa", "aguas"]
+  },
+  "internet": {
+    "emoji": "📶",
+    "keywords": ["internet", "wifi", "fibertel", "telecentro", "flow", "movistar internet"]
+  },
+  "celular": {
+    "emoji": "📱",
+    "keywords": ["celular", "telefono", "movistar", "personal", "claro", "chip", "abono celular"]
+  },
+  "streaming": {
+    "emoji": "🎬",
+    "keywords": ["netflix", "spotify", "disney", "hbo", "amazon prime", "youtube premium", "suscripcion", "paramount"]
+  },
+  "cine_teatro": {
+    "emoji": "🎥",
+    "keywords": ["cine", "pelicula", "teatro", "obra"]
+  },
+  "recitales": {
+    "emoji": "🎤",
+    "keywords": ["recital", "show", "entradas", "ticketek", "concierto", "festival"]
+  },
+  "gimnasio": {
+    "emoji": "🏋️",
+    "keywords": ["gimnasio", "gym", "entrenamiento", "personal trainer", "crossfit"]
+  },
+  "deporte": {
+    "emoji": "⚽",
+    "keywords": ["cancha", "futbol", "padel", "tenis", "pileta natacion", "running", "zapatillas running", "fulbito", "fulbo", "partido"]
+  },
+  "salidas": {
+    "emoji": "🍻",
+    "keywords": ["boliche", "previa", "cerveza", "salidas", "birra", "vino", "trago"]
+  },
+  "videojuegos": {
+    "emoji": "🎮",
+    "keywords": ["videojuego", "steam", "playstation", "xbox", "nintendo", "juego"]
+  },
+  "farmacia": {
+    "emoji": "💊",
+    "keywords": ["farmacia", "remedio", "medicamento", "farmacity", "simplicity"]
+  },
+  "medico": {
+    "emoji": "🩺",
+    "keywords": ["medico", "doctor", "consulta medica", "clinica", "guardia"]
+  },
+  "dentista": {
+    "emoji": "🦷",
+    "keywords": ["dentista", "odontologo", "ortodoncia"]
+  },
+  "obra_social": {
+    "emoji": "⚕️",
+    "keywords": ["obra social", "prepaga", "osde", "swiss medical", "galeno"]
+  },
+  "psicologo": {
+    "emoji": "🧠",
+    "keywords": ["psicologo", "terapia", "psiquiatra", "sesion"]
+  },
+  "kinesiologo": {
+    "emoji": "🦵",
+    "keywords": ["kinesiologo", "kinesiologia", "rehabilitacion"]
+  },
+  "oftalmologo": {
+    "emoji": "👓",
+    "keywords": ["oftalmologo", "anteojos", "lentes de contacto", "optica"]
+  },
+  "ropa": {
+    "emoji": "👕",
+    "keywords": ["ropa", "indumentaria", "remera", "pantalon", "campera", "zara", "shopping"]
+  },
+  "calzado": {
+    "emoji": "👟",
+    "keywords": ["zapatillas", "zapatos", "calzado"]
+  },
+  "electronica": {
+    "emoji": "💻",
+    "keywords": ["electronica", "celular nuevo", "notebook", "auriculares", "cargador", "garbarino"]
+  },
+  "mercadolibre": {
+    "emoji": "📦",
+    "keywords": ["mercado libre", "meli", "amazon", "envio", "compra online"]
+  },
+  "regalo": {
+    "emoji": "🎁",
+    "keywords": ["regalo", "cumpleanos", "obsequio", "presente"]
+  },
+  "peluqueria": {
+    "emoji": "💇",
+    "keywords": ["peluqueria", "corte de pelo", "barberia", "peinado"]
+  },
+  "cosmetica": {
+    "emoji": "💄",
+    "keywords": ["cosmetica", "perfumeria", "maquillaje", "skincare", "crema"]
+  },
+  "manicura": {
+    "emoji": "💅",
+    "keywords": ["manicura", "unas", "pedicura"]
+  },
+  "mascota": {
+    "emoji": "🐾",
+    "keywords": ["mascota", "veterinaria", "alimento balanceado", "vacuna perro", "peluqueria canina", "perro", "gato", "peces"]
+  },
+  "sueldo": {
+    "emoji": "💼",
+    "keywords": ["sueldo", "salario", "honorarios", "pago trabajo", "recibo de sueldo"]
+  },
+  "transferencia": {
+    "emoji": "🤝",
+    "keywords": ["transferencia", "pago a", "deuda", "prestamo entre amigos", "mercadopago"]
+  },
+  "ahorro_inversion": {
+    "emoji": "💰",
+    "keywords": ["ahorro", "inversion", "plazo fijo", "cedear", "bono", "fondo comun"]
+  },
+  "cripto": {
+    "emoji": "🪙",
+    "keywords": ["cripto", "bitcoin", "ethereum", "binance", "usdt"]
+  },
+  "impuestos": {
+    "emoji": "🧾",
+    "keywords": ["impuesto", "afip", "monotributo", "comision", "arca", "iibb"]
+  },
+  "tarjeta_credito": {
+    "emoji": "💳",
+    "keywords": ["tarjeta de credito", "resumen tarjeta", "cuota", "visa", "mastercard"]
+  },
+  "prestamo": {
+    "emoji": "🏦",
+    "keywords": ["prestamo", "credito", "banco", "cuota prestamo"]
+  },
+  "educacion": {
+    "emoji": "🎓",
+    "keywords": ["facultad", "universidad", "curso", "cuota colegio", "capacitacion", "carrera"]
+  },
+  "utiles": {
+    "emoji": "📚",
+    "keywords": ["libro", "apuntes", "fotocopias", "utiles escolares", "cuaderno"]
+  },
+  "viajes": {
+    "emoji": "✈️",
+    "keywords": ["viaje", "vacaciones", "pasaje", "avion", "hotel", "hospedaje", "turismo", "aerolineas"]
+  },
+  "seguro": {
+    "emoji": "🛡️",
+    "keywords": ["seguro", "seguro hogar", "seguro vida", "aseguradora"]
+  },
+  "ninos": {
+    "emoji": "🧸",
+    "keywords": ["jardin", "pañales", "juguetes", "ropa de bebe", "guarderia"]
+  },
+  "efectivo": {
+    "emoji": "💵",
+    "keywords": ["efectivo", "cajero", "extraccion", "atm"]
+  },
+  "propina": {
+    "emoji": "🙌",
+    "keywords": ["propina", "vuelto"]
+  },
+  "donacion": {
+    "emoji": "❤️",
+    "keywords": ["donacion", "ong", "colecta", "caridad"]
+  },
+  "ingreso": {
+    "emoji": "💸",
+    "keywords": ["ingreso", "pago recibido", "remuneracion", "salario"]
+  },
+  "otros": {
+    "emoji": "📌",
+    "keywords": ["varios", "otro gasto", "sin categoria", "imprevisto"]
+  }
+}

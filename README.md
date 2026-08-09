@@ -1,4 +1,4 @@
-# Dupla — tu compañera de gastos
+# Dupla — tu compañero de gastos
 
 App de finanzas personales multimoneda (ARS / USD) para el mercado argentino.
 MVP: gasto por voz → confirmación → dashboard.
