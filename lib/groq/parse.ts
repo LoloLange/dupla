@@ -16,7 +16,8 @@ Convertís frases habladas y coloquiales sobre plata en un JSON con esta forma E
       "moneda": "ARS" | "USD",
       "categoria": string,
       "descripcion": string,
-      "fecha": string  // ISO 8601 con hora, ej: "2026-08-06T14:30:00.000Z"
+      "fecha": string,  // fecha y hora LOCAL del usuario, SIN zona horaria, ej: "2026-08-06T14:30:00"
+      "fecha_hint": string  // parte de la frase que indica la fecha de ESTE movimiento, ej: "el 3 de agosto", "ayer", "hoy a las 9 de la noche", "a la una del mediodia", o "" si no hay
     }
   ]
 }
@@ -40,27 +41,29 @@ Reglas:
   - Educación: curso, libro, facultad, colegio, idioma, suscripción educativa.
   - Vivienda: alquiler, seguro, muebles, hogar, arreglos, bazar.
 - "descripcion": texto corto y natural para mostrar, ej "Supermercado Coto" o "Netflix". Sin signos raros.
-- "fecha": si la frase dice "hoy", "recién", "ahora" o no da fecha, usá la fecha actual del usuario. Si dice "ayer", restá un día. Si dice "el lunes"/"el martes", calculá el día de la semana correspondiente al día actual de la semana.
+- "fecha": es la hora LOCAL del usuario y SIEMPRE sin zona horaria (ej: "2026-08-07T21:00:00"). NUNCA uses "Z" ni "+00:00" ni "-03:00". La hora local actual te la paso abajo. Si la frase dice "hoy", "recién", "ahora" o no da fecha, usá la fecha local actual. Si dice "ayer", restá un día. Si dice "el lunes"/"el martes", calculá el día de la semana correspondiente al día actual de la semana. Si la frase dice una hora ("a las 9 de la noche", "a la mañana", "al mediodía"), reflejá esa hora tal cual en el campo "fecha" (21:00, 09:00, 12:00 respectivamente).
+- "fecha_hint": copiá TEXTUALMENTE la parte de la frase que indica la fecha y hora de ESTE movimiento en particular. Si hay varios movimientos, cada uno lleva SOLO el fragmento que le corresponde a él (ej: para "el 3 de agosto gasté 30 mil y ayer gasté 10 dólares" el primero lleva "el 3 de agosto" y el segundo "ayer"). Si ese movimiento no tiene fecha, poné "".
 - Si la frase tiene incertidumbre o es ambigua, elegí la interpretación más probable y seguí el formato.
 - Respondé SOLO el JSON, sin texto alrededor, sin markdown.
 `;
 
 export async function parsearTextoATexto(
   texto: string,
-  ahora: string
+  ahoraLocal: string,
+  offsetMinutos: number
 ): Promise<GastoParseado[]> {
   const mensajes: { role: "system" | "user" | "assistant"; content: string }[] = [
     { role: "system", content: SISTEMA },
     {
       role: "user",
-      content: `Ahora son las ${ahora}. Frase del usuario: "${texto}"`,
+      content: `Ahora son las ${ahoraLocal} (hora local del usuario, sin zona horaria). Devolvé "fecha" en esa misma hora local, sin "Z" ni offsets. Frase del usuario: "${texto}"`,
     },
   ];
 
   const hayNumero = /\d/.test(texto);
 
   let resultado = await groqChatJson(mensajes);
-  const movimientos = normalizarMovimientos(resultado, ahora);
+  const movimientos = normalizarMovimientos(resultado, texto, ahoraLocal, offsetMinutos);
   if (movimientos.length > 0) return movimientos;
 
   if (!hayNumero) return [];
@@ -76,12 +79,14 @@ export async function parsearTextoATexto(
       "La frase parece contener gastos o ingresos pero no devolviste montos válidos. monto debe ser SOLO un número (ej: 8000, 15.5), sin palabras ni símbolos. Si la frase realmente no tiene movimientos, devolvé {\"movimientos\": []}.",
   });
   resultado = await groqChatJson(mensajes);
-  return normalizarMovimientos(resultado, ahora);
+  return normalizarMovimientos(resultado, texto, ahoraLocal, offsetMinutos);
 }
 
 function normalizarMovimientos(
   bruto: unknown,
-  ahora: string
+  texto: string,
+  ahoraLocal: string,
+  offsetMinutos: number
 ): GastoParseado[] {
   if (typeof bruto !== "object" || bruto === null) {
     throw new Error("Formato inesperado del parseo");
@@ -94,8 +99,9 @@ function normalizarMovimientos(
   else lista = [r];
 
   const resultado: GastoParseado[] = [];
+  const unico = lista.length === 1;
   for (const item of lista) {
-    const g = normalizarUno(item, ahora);
+    const g = normalizarUno(item, texto, unico, ahoraLocal, offsetMinutos);
     if (g) resultado.push(g);
   }
   return resultado;
@@ -103,7 +109,10 @@ function normalizarMovimientos(
 
 function normalizarUno(
   bruto: unknown,
-  ahora: string
+  texto: string,
+  unico: boolean,
+  ahoraLocal: string,
+  offsetMinutos: number
 ): GastoParseado | null {
   if (typeof bruto !== "object" || bruto === null) {
     return null;
@@ -133,7 +142,12 @@ function normalizarUno(
     typeof r.descripcion === "string" ? r.descripcion.trim() : "";
   if (!descripcion) descripcion = categoria;
 
-  const fecha = validarFecha(r.fecha, ahora);
+  const hint =
+    typeof r.fecha_hint === "string" && r.fecha_hint.trim()
+      ? r.fecha_hint.trim()
+      : "";
+  const textoFecha = hint || (unico ? texto : "");
+  const fecha = resolverFecha(textoFecha, r.fecha, ahoraLocal, offsetMinutos);
 
   return { tipo, monto, moneda, categoria, descripcion, fecha };
 }
@@ -180,11 +194,159 @@ function parsearMonto(valor: unknown): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function validarFecha(valor: unknown, ahora: string): string {
-  if (typeof valor !== "string") return new Date(ahora).toISOString();
-  const d = new Date(valor);
-  if (Number.isNaN(d.getTime())) return new Date(ahora).toISOString();
+function aIsoDesdeHoraLocal(
+  fechaLocal: string,
+  offsetMinutos: number
+): string | null {
+  const m = fechaLocal
+    .trim()
+    .match(
+      /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?/
+    );
+  if (!m) return null;
+  const [, y, mo, d, h = "0", mi = "0", s = "0"] = m;
+  const utcCandidato = Date.UTC(+y, +mo - 1, +d, +h, +mi, +s);
+  if (Number.isNaN(utcCandidato)) return null;
+  return new Date(utcCandidato + offsetMinutos * 60000).toISOString();
+}
+
+const DIAS_SEMANA: Record<string, number> = {
+  domingo: 0,
+  lunes: 1,
+  martes: 2,
+  miercoles: 3,
+  jueves: 4,
+  viernes: 5,
+  sabado: 6,
+};
+
+const MESES: Record<string, number> = {
+  enero: 0,
+  febrero: 1,
+  marzo: 2,
+  abril: 3,
+  mayo: 4,
+  junio: 5,
+  julio: 6,
+  agosto: 7,
+  septiembre: 8,
+  octubre: 9,
+  noviembre: 10,
+  diciembre: 11,
+};
+
+function textoNormalizado(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function aStrFecha(y: number, mo: number, d: number): string {
+  return `${y}-${String(mo + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+function diaReferencia(texto: string, ahoraLocal: string): string | null {
+  const t = textoNormalizado(texto);
+  const fechaParte = ahoraLocal.split("T")[0];
+  const [y, mo, d] = fechaParte.split("-").map(Number);
+  const hoy = Date.UTC(y, mo - 1, d);
+
+  const porDias = (n: number): string => {
+    const base = new Date(hoy + n * 86_400_000);
+    return aStrFecha(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate());
+  };
+
+  if (/\banteayer\b/.test(t)) return porDias(-2);
+  if (/\banoche\b/.test(t)) return porDias(-1);
+  if (/\bayer\b/.test(t)) return porDias(-1);
+  if (/\b(?:hoy|recien|recien ahora|ahora mismo)\b/.test(t)) return porDias(0);
+
+  for (const nombreDia of Object.keys(DIAS_SEMANA)) {
+    if (!new RegExp(`\\b${nombreDia}\\b`).test(t)) continue;
+    const objetivo = DIAS_SEMANA[nombreDia];
+    const diaHoy = new Date(hoy).getUTCDay();
+    let diff = diaHoy - objetivo;
+    if (diff < 0) diff += 7;
+    return porDias(-diff);
+  }
+
+  const reMes = /\b(\d{1,2}) de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/;
+  const mMes = reMes.exec(t);
+  if (mMes) {
+    const [, diaTexto, mesTexto] = mMes;
+    if (diaTexto && mesTexto) {
+      const dia = Math.min(31, Math.max(1, +diaTexto));
+      return aStrFecha(y, MESES[mesTexto], dia);
+    }
+  }
+
+  const reNum = /\b(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b/;
+  const mNum = reNum.exec(t);
+  if (mNum) {
+    const [, diaTexto, mesTexto, anioTexto] = mNum;
+    if (diaTexto && mesTexto) {
+      const dia = +diaTexto;
+      const mes = +mesTexto;
+      if (mes >= 1 && mes <= 12 && dia >= 1 && dia <= 31) {
+        const anio = anioTexto
+          ? +anioTexto < 100
+            ? 2000 + +anioTexto
+            : +anioTexto
+          : y;
+        return aStrFecha(anio, mes - 1, dia);
+      }
+    }
+  }
+
+  return null;
+}
+
+function resolverFecha(
+  texto: string,
+  fechaLlm: unknown,
+  ahoraLocal: string,
+  offsetMinutos: number
+): string {
+  const dia = diaReferencia(texto, ahoraLocal);
+  const fechaLlmStr = typeof fechaLlm === "string" ? fechaLlm : "";
+  if (!dia) return validarFecha(fechaLlmStr, ahoraLocal, offsetMinutos);
+
+  const reHora = /(\d{1,2}):(\d{2})(?::(\d{2}))?/;
+  const mHora = reHora.exec(fechaLlmStr);
+  let horaCompleta: string;
+  if (mHora) {
+    const [, h, mi, s] = mHora;
+    horaCompleta = `${(h ?? "0").padStart(2, "0")}:${(mi ?? "00")}:${s ?? "00"}`;
+  } else {
+    horaCompleta = ahoraLocal.split("T")[1] ?? "12:00:00";
+  }
+  return validarFecha(`${dia}T${horaCompleta}`, ahoraLocal, offsetMinutos);
+}
+
+function validarFecha(
+  valor: unknown,
+  ahoraLocal: string,
+  offsetMinutos: number
+): string {
+  const ahoraUtc =
+    aIsoDesdeHoraLocal(ahoraLocal, offsetMinutos) ?? new Date().toISOString();
   const haceUnAnio = Date.now() - 365 * 24 * 60 * 60 * 1000;
-  if (d.getTime() < haceUnAnio) return new Date(ahora).toISOString();
-  return d.toISOString();
+
+  if (typeof valor === "string" && valor.trim()) {
+    const v = valor.trim();
+    const tieneZona = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(v);
+    if (tieneZona) {
+      const d = new Date(v);
+      if (!Number.isNaN(d.getTime()) && d.getTime() >= haceUnAnio) {
+        return d.toISOString();
+      }
+    } else {
+      const conv = aIsoDesdeHoraLocal(v, offsetMinutos);
+      if (conv && new Date(conv).getTime() >= haceUnAnio) {
+        return conv;
+      }
+    }
+  }
+  return ahoraUtc;
 }

@@ -295,7 +295,7 @@ export function ExpenseConfirmSheet({
                 <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-sub">
                   Categoría
                 </span>
-                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar lg:flex-wrap lg:overflow-visible">
                   {CATEGORIAS.map((c) => (
                     <button
                       key={c}

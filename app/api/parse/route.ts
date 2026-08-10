@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       texto?: string;
       ahora?: string;
+      offset?: number;
     };
 
     const texto = body.texto?.trim();
@@ -18,9 +19,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ahora = body.ahora && !isNaN(Date.parse(body.ahora)) ? body.ahora : new Date().toISOString();
+    const ahoraUtc =
+      body.ahora && !isNaN(Date.parse(body.ahora))
+        ? body.ahora
+        : new Date().toISOString();
+    const offsetMinutos =
+      typeof body.offset === "number" && Number.isFinite(body.offset)
+        ? body.offset
+        : new Date().getTimezoneOffset();
+    const ahoraLocal = new Date(
+      Date.parse(ahoraUtc) - offsetMinutos * 60000
+    )
+      .toISOString()
+      .slice(0, 19);
     console.log("[parse] texto recibido:", JSON.stringify(texto));
-    const gastos = await parsearTextoATexto(texto, ahora);
+    const gastos = await parsearTextoATexto(texto, ahoraLocal, offsetMinutos);
     console.log("[parse] resultado:", JSON.stringify(gastos));
 
     if (gastos.length === 0) {
