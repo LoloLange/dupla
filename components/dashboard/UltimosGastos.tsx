@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Gasto } from "@/lib/types";
 import { aInicioDiaLocal, formatDiaGrupo, formatHora, formatMonto } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { ThinkingOrb } from "thinking-orbs";
 import { emojiDeMovimiento } from "@/lib/categorias";
 import { buscarLogo, cargarLogos, rutaLogo, type LogoApp, type LogoListo } from "@/lib/svgl";
 
@@ -90,10 +89,51 @@ export function UltimosGastos({
 
   if (cargando) {
     return (
-      <div className="anim-fade-in flex flex-col items-center gap-3 rounded-3xl border border-line bg-surface px-6 py-12">
-        <ThinkingOrb state="working" size={64} aria-label="Cargando movimientos" />
-        <p className="text-sm text-sub">Cargando movimientos…</p>
-      </div>
+      <section className="anim-fade-in w-full" aria-busy="true">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="h-6 w-36 rounded-lg skeleton" aria-hidden />
+          <span className="h-8 w-32 rounded-full skeleton" aria-hidden />
+        </div>
+        <div className="space-y-4">
+          {[0, 1].map((grupo) => (
+            <div key={grupo}>
+              <span
+                className="mb-2 block h-3 w-20 rounded-md skeleton"
+                aria-hidden
+              />
+              <div className="overflow-hidden rounded-3xl border border-line bg-surface">
+                {[0, 1, 2].map((fila, i) => (
+                  <div
+                    key={fila}
+                    className={`flex items-center gap-3 px-4 py-3.5 ${
+                      i > 0 ? "border-t border-line" : ""
+                    }`}
+                  >
+                    <span
+                      className="size-10 shrink-0 rounded-2xl skeleton"
+                      aria-hidden
+                    />
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <span
+                        className="block h-4 w-2/3 max-w-52 rounded-md skeleton"
+                        aria-hidden
+                      />
+                      <span
+                        className="block h-3 w-1/3 max-w-28 rounded-md skeleton"
+                        aria-hidden
+                      />
+                    </div>
+                    <span
+                      className="h-6 w-20 rounded-lg skeleton"
+                      aria-hidden
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     );
   }
 

@@ -365,9 +365,7 @@ export default function DashboardPage() {
     (gastoId: string) => {
       const g = gastosHook.gastos.find((x) => x.id === gastoId);
       if (g) abrirEdicion(g);
-      const ids = avisos
-        .filter((a) => a.gastoId === gastoId)
-        .map((a) => a.id);
+      const ids = avisos.filter((a) => a.gastoId === gastoId).map((a) => a.id);
       ids.forEach((id) => quitarAviso(id));
     },
     [gastosHook.gastos, abrirEdicion, avisos, quitarAviso],
@@ -544,7 +542,10 @@ export default function DashboardPage() {
           </div>
 
           <div>
-            <Patrimonio gastos={gastosHook.gastos} />
+            <Patrimonio
+              gastos={gastosHook.gastos}
+              cargando={gastosHook.cargando}
+            />
           </div>
         </div>
 
