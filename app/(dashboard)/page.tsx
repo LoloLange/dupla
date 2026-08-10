@@ -1,17 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { useGastos } from "@/hooks/useGastos";
-import { esCategoria, type Gasto, type GastoParseado } from "@/lib/types";
+import {
+  esCategoria,
+  type Gasto,
+  type GastoParseado,
+  type Moneda,
+} from "@/lib/types";
+import { inicioDeRango, type RangoFecha } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeProvider";
 import { VoiceButton } from "@/components/voice/VoiceButton";
 import { ExpenseConfirmSheet } from "@/components/voice/ExpenseConfirmSheet";
 import { Patrimonio } from "@/components/dashboard/Patrimonio";
 import { UltimosGastos } from "@/components/dashboard/UltimosGastos";
+import { FiltrosYOrden, type Orden } from "@/components/dashboard/FiltrosYOrden";
 import { Logo } from "@/components/Logo";
 
 type Procesando = { activo: boolean; mensaje: string };
@@ -195,8 +202,26 @@ export default function DashboardPage() {
   });
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [nombre, setNombre] = useState<string | null>(null);
+  const [rango, setRango] = useState<RangoFecha>("mes");
+  const [categorias, setCategorias] = useState<string[]>([]);
+  const [monedas, setMonedas] = useState<Moneda[]>([]);
+  const [busqueda, setBusqueda] = useState("");
+  const [orden, setOrden] = useState<Orden>("desc");
   const avisoIdRef = useRef(0);
   const listaAvisosRef = useRef<HTMLDivElement>(null);
+
+  const gastosFiltrados = useMemo(() => {
+    const desde = inicioDeRango(rango);
+    const termino = busqueda.trim().toLowerCase();
+    return gastosHook.gastos.filter(
+      (g) =>
+        new Date(g.fecha) >= desde &&
+        (categorias.length === 0 || categorias.includes(g.categoria)) &&
+        (monedas.length === 0 || monedas.includes(g.moneda)) &&
+        (termino === "" ||
+          (g.descripcion ?? "").toLowerCase().includes(termino)),
+    );
+  }, [gastosHook.gastos, rango, categorias, monedas, busqueda]);
 
   useFlipList(avisos, listaAvisosRef);
 
@@ -541,10 +566,25 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div>
+          <div className="pt-3 lg:pt-5">
+            <div className="mb-4">
+              <FiltrosYOrden
+                rango={rango}
+                onChangeRango={setRango}
+                categorias={categorias}
+                onChangeCategorias={setCategorias}
+                monedas={monedas}
+                onChangeMonedas={setMonedas}
+                busqueda={busqueda}
+                onChangeBusqueda={setBusqueda}
+                orden={orden}
+                onChangeOrden={setOrden}
+              />
+            </div>
             <Patrimonio
-              gastos={gastosHook.gastos}
+              gastos={gastosFiltrados}
               cargando={gastosHook.cargando}
+              rango={rango}
             />
           </div>
         </div>
@@ -574,8 +614,10 @@ export default function DashboardPage() {
         )}
 
         <UltimosGastos
-          gastos={gastosHook.gastos}
+          gastos={gastosFiltrados}
+          hayMasGastos={gastosHook.gastos.length > gastosFiltrados.length}
           cargando={gastosHook.cargando}
+          orden={orden}
           onEliminar={eliminarGasto}
           onEditar={abrirEdicion}
           onAñadirManual={abrirManual}

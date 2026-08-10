@@ -6,21 +6,28 @@ import {
   formatARS,
   formatUSD,
   formatMonto,
+  inicioDeRango,
+  etiquetaRango,
+  type RangoFecha,
 } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 type Saldo = { ARS: number; USD: number };
 type Cotizacion = { casa: string; nombre: string; compra: number; venta: number };
 
-function montoDelMes(gastos: Gasto[], moneda: Moneda, tipo: Tipo): number {
-  const ahora = new Date();
-  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+function montoEnRango(
+  gastos: Gasto[],
+  moneda: Moneda,
+  tipo: Tipo,
+  rango: RangoFecha
+): number {
+  const desde = inicioDeRango(rango);
   return gastos
     .filter(
       (g) =>
         g.moneda === moneda &&
         g.tipo === tipo &&
-        new Date(g.fecha) >= inicioMes
+        new Date(g.fecha) >= desde
     )
     .reduce((acc, g) => acc + Number(g.monto), 0);
 }
@@ -35,9 +42,11 @@ type DatosMoneda = {
 export function Patrimonio({
   gastos,
   cargando: gastosCargando = false,
+  rango = "mes",
 }: {
   gastos: Gasto[];
   cargando?: boolean;
+  rango?: RangoFecha;
 }) {
   const [saldo, setSaldo] = useState<Saldo | null>(null);
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[] | null>(null);
@@ -99,8 +108,8 @@ export function Patrimonio({
   const datosMoneda = useCallback(
     (moneda: Moneda): DatosMoneda => {
       const saldoActual = saldo?.[moneda] ?? 0;
-      const gastado = montoDelMes(gastos, moneda, "gasto");
-      const ingresado = montoDelMes(gastos, moneda, "ingreso");
+      const gastado = montoEnRango(gastos, moneda, "gasto", rango);
+      const ingresado = montoEnRango(gastos, moneda, "ingreso", rango);
       return {
         saldoActual,
         gastado,
@@ -108,7 +117,7 @@ export function Patrimonio({
         total: saldoActual + ingresado - gastado,
       };
     },
-    [saldo, gastos]
+    [saldo, gastos, rango]
   );
 
   const totalARS = datosMoneda("ARS").total;
@@ -162,7 +171,7 @@ export function Patrimonio({
 
         {!cargando && enRojo && (
           <p className="anim-fade-in mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-danger/15 px-2.5 py-0.5 text-xs font-semibold text-danger">
-            <span aria-hidden>▼</span> estás en rojo este mes
+            <span aria-hidden>▼</span> estás en rojo {etiquetaRango(rango)}
           </p>
         )}
 
@@ -175,7 +184,7 @@ export function Patrimonio({
               <span className="font-semibold text-ink">
                 {formatMonto(gastado, moneda)}
               </span>{" "}
-              este mes
+              {etiquetaRango(rango)}
             </p>
           ) : null}
           {cargando ? (
@@ -186,11 +195,11 @@ export function Patrimonio({
               <span className="font-semibold text-ok">
                 {formatMonto(ingresado, moneda)}
               </span>{" "}
-              este mes
+              {etiquetaRango(rango)}
             </p>
           ) : null}
           {!cargando && gastado === 0 && ingresado === 0 && (
-            <p>Nada cargado este mes todavía</p>
+            <p>Nada cargado {etiquetaRango(rango)} todavía</p>
           )}
         </div>
       </div>

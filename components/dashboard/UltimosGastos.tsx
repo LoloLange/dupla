@@ -6,6 +6,7 @@ import { aInicioDiaLocal, formatDiaGrupo, formatHora, formatMonto } from "@/lib/
 import { cn } from "@/lib/utils";
 import { emojiDeMovimiento } from "@/lib/categorias";
 import { buscarLogo, cargarLogos, rutaLogo, type LogoApp, type LogoListo } from "@/lib/svgl";
+import type { Orden } from "@/components/dashboard/FiltrosYOrden";
 
 export function UltimosGastos({
   gastos,
@@ -13,12 +14,16 @@ export function UltimosGastos({
   onEliminar,
   onEditar,
   onAñadirManual,
+  hayMasGastos = false,
+  orden = "desc",
 }: {
   gastos: Gasto[];
   cargando: boolean;
   onEliminar: (gasto: Gasto) => void;
   onEditar: (gasto: Gasto) => void;
   onAñadirManual?: () => void;
+  hayMasGastos?: boolean;
+  orden?: Orden;
 }) {
   const [logos, setLogos] = useState<LogoListo[] | null>(null);
   const [saliendo, setSaliendo] = useState<string | null>(null);
@@ -75,17 +80,18 @@ export function UltimosGastos({
       arr.push(g);
       mapa.set(clave, arr);
     }
+    const dir = orden === "asc" ? 1 : -1;
     return Array.from(mapa.entries())
-      .sort((a, b) => b[0] - a[0])
+      .sort((a, b) => (a[0] - b[0]) * dir)
       .map(([clave, lista]) => ({
         clave: new Date(clave).toISOString(),
         lista: lista
           .slice()
           .sort(
-            (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+            (a, b) => (new Date(a.fecha).getTime() - new Date(b.fecha).getTime()) * dir
           ),
       }));
-  }, [gastos]);
+  }, [gastos, orden]);
 
   if (cargando) {
     return (
@@ -138,6 +144,21 @@ export function UltimosGastos({
   }
 
   if (gastos.length === 0) {
+    if (hayMasGastos) {
+      return (
+        <div className="anim-fade-up flex flex-col items-center rounded-3xl border border-dashed border-line px-6 py-12 text-center">
+          <span className="grid size-16 place-items-center rounded-full bg-surface-2 text-3xl">
+            📅
+          </span>
+          <p className="mt-5 font-display text-2xl font-medium tracking-tight text-ink">
+            Sin movimientos en este período
+          </p>
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-sub">
+            Probá con un rango de fechas más amplio para ver tus movimientos.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="anim-fade-up flex flex-col items-center rounded-3xl border border-dashed border-line px-6 py-12 text-center">
         <span className="grid size-16 place-items-center rounded-full bg-ars/15 text-3xl">

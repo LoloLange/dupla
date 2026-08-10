@@ -100,3 +100,52 @@ export function slugificar(texto: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 }
+
+export type RangoFecha = "hoy" | "7d" | "mes" | "3m" | "6m" | "ano";
+
+export const RANGOS_FECHA: { id: RangoFecha; etiqueta: string }[] = [
+  { id: "hoy", etiqueta: "Hoy" },
+  { id: "7d", etiqueta: "Últimos 7 días" },
+  { id: "mes", etiqueta: "Este mes" },
+  { id: "3m", etiqueta: "3 meses" },
+  { id: "6m", etiqueta: "6 meses" },
+  { id: "ano", etiqueta: "Un año" },
+];
+
+export function inicioDeRango(rango: RangoFecha, ahora = new Date()): Date {
+  const hoy = aInicioDiaLocal(ahora);
+  switch (rango) {
+    case "hoy":
+      return hoy;
+    case "7d": {
+      const d = new Date(hoy);
+      d.setDate(d.getDate() - 6);
+      return d;
+    }
+    case "mes":
+      return new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    case "3m":
+      return new Date(ahora.getFullYear(), ahora.getMonth() - 2, 1);
+    case "6m":
+      return new Date(ahora.getFullYear(), ahora.getMonth() - 5, 1);
+    case "ano":
+      return new Date(ahora.getFullYear() - 1, ahora.getMonth(), 1);
+  }
+}
+
+export function etiquetaRango(rango: RangoFecha): string {
+  switch (rango) {
+    case "hoy":
+      return "hoy";
+    case "7d":
+      return "en los últimos 7 días";
+    case "mes":
+      return "este mes";
+    case "3m":
+      return "en los últimos 3 meses";
+    case "6m":
+      return "en los últimos 6 meses";
+    case "ano":
+      return "en el último año";
+  }
+}
