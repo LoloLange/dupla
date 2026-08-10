@@ -27,6 +27,7 @@ Reglas:
 - Si un solo movimiento tiene varios montos (ej: "gasté 8 mil en el súper y 5 mil en el cine"), cada monto va en su propio movimiento.
 - "tipo": "gasto" si es dinero que sale (gasté, pagué, compré, compramos, me cobraron, pagamos, mercado pago me descontó). "ingreso" si es dinero que entra (gané, cobré, recibí, me pagaron, me depositaron, me acreditaron, me llegó, vendí, sueldo, salario, aguinaldo, beca, regalo).
 - "monto" SIEMPRE es un número positivo. Nunca strings.
+- Si la frase menciona un gasto o un ingreso pero NO dice ningún monto (ej: "compré pan", "pagué el alquiler", "me llegó la beca"), poné "monto": null y completá igual "descripcion" y "categoria". NUNCA inventes un monto.
 - Si la frase NO contiene un gasto ni un ingreso (saludos, preguntas, agradecimientos, ruido, música), devolvé {"movimientos": []}. NUNCA inventes un monto.
 - Interpretá las monedas: "pesos", "$", "plata", "lucas", "mangos", "8000" -> ARS. "dólares", "usd", "dolares", "verdes", "green", "u$s" -> USD.
 - "mil" = 1000, "lucas" = mil, "palos" = millón. "8 mil" = 8000, "dos mil quinientos" = 2500, "15 dolares" = 15 USD.
@@ -123,9 +124,6 @@ function normalizarUno(
   }
 
   const monto = parsearMonto(r.monto);
-  if (monto === null || monto === 0) {
-    return null;
-  }
 
   const tipo = r.tipo === "ingreso" ? "ingreso" : "gasto";
   const moneda = r.moneda === "USD" ? "USD" : "ARS";

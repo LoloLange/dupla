@@ -23,8 +23,8 @@ export type GastoInput = {
   fecha: string;
 };
 
-export type GastoParseado = GastoInput & {
-  monto: number;
+export type GastoParseado = Omit<GastoInput, "monto"> & {
+  monto: number | null;
 };
 
 export const CATEGORIAS = [

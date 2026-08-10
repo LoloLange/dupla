@@ -30,7 +30,9 @@ export function ExpenseConfirmSheet({
   onCancel,
   onDone,
 }: Props) {
-  const [monto, setMonto] = useState(() => (gasto ? String(gasto.monto) : ""));
+  const [monto, setMonto] = useState(() =>
+    gasto && gasto.monto !== null ? String(gasto.monto) : "",
+  );
   const [moneda, setMoneda] = useState<Moneda>(() => gasto?.moneda ?? "ARS");
   const [tipo, setTipo] = useState<Tipo>(() => gasto?.tipo ?? "gasto");
   const [categoria, setCategoria] = useState(() =>
@@ -229,6 +231,27 @@ export function ExpenseConfirmSheet({
                     ? "Completá los datos y guardalo."
                     : "Tocá lo que entendió mal y corregilo."}
               </p>
+
+              {gasto && gasto.monto === null && (
+                <div className="anim-fade-in mb-4 flex items-start gap-2.5 rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3">
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="mt-0.5 size-4 shrink-0 text-danger"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+                    />
+                  </svg>
+                  <p className="text-sm text-danger">
+                    No reconocí ningún monto. Completá el monto a mano.
+                  </p>
+                </div>
+              )}
 
               <div className="mb-4 flex rounded-2xl bg-surface-2 p-1.5">
                 {(["gasto", "ingreso"] as const).map((t) => (

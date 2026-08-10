@@ -331,15 +331,33 @@ export default function DashboardPage() {
         };
 
         let fallo = false;
+        const sinMonto: GastoParseado[] = [];
         for (const g of gastos) {
+          if (g.monto === null) {
+            sinMonto.push(g);
+            continue;
+          }
           try {
-            const guardado = await gastosHook.crear(g);
+            const guardado = await gastosHook.crear({ ...g, monto: g.monto });
             mostrarAviso(
               `${g.tipo === "ingreso" ? "Ingreso" : "Gasto"} guardado · ${g.descripcion}`,
               guardado.id,
             );
           } catch {
             fallo = true;
+          }
+        }
+        if (sinMonto.length > 0) {
+          setErrorVoz(null);
+          grabadora.limpiarError();
+          setSheet({
+            gasto: sinMonto[0],
+            clave: `voz-falta-monto-${Date.now()}`,
+          });
+          if (sinMonto.length > 1) {
+            mostrarAviso(
+              `Faltó el monto en ${sinMonto.length} movimientos. Completalos a mano.`,
+            );
           }
         }
         if (fallo) {
@@ -357,7 +375,7 @@ export default function DashboardPage() {
         setProcesando({ activo: false, mensaje: "" });
       }
     },
-    [gastosHook, mostrarAviso],
+    [gastosHook, mostrarAviso, grabadora],
   );
 
   const abrirManual = useCallback(() => {
@@ -403,11 +421,15 @@ export default function DashboardPage() {
 
   const confirmarGasto = useCallback(
     async (gasto: GastoParseado & { id?: string }) => {
+      if (gasto.monto === null) return;
       if (gasto.id) {
-        await gastosHook.actualizar(gasto.id, gasto);
+        await gastosHook.actualizar(gasto.id, { ...gasto, monto: gasto.monto });
         mostrarAviso("Movimiento actualizado");
       } else {
-        const guardado = await gastosHook.crear(gasto);
+        const guardado = await gastosHook.crear({
+          ...gasto,
+          monto: gasto.monto,
+        });
         mostrarAviso(
           gasto.tipo === "ingreso" ? "Ingreso guardado" : "Gasto guardado",
           guardado.id,
