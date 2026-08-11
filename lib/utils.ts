@@ -1,7 +1,23 @@
-import type { Moneda } from "@/lib/types";
+import type { Moneda, MonedaSecundaria } from "@/lib/types";
 
 export function cn(...clases: Array<string | false | null | undefined>) {
   return clases.filter(Boolean).join(" ");
+}
+
+const LOCALE_POR_MONEDA: Record<MonedaSecundaria, string> = {
+  USD: "es-AR",
+  EUR: "es-AR",
+  BRL: "pt-BR",
+  CLP: "es-CL",
+  UYU: "es-UY",
+};
+
+export function formatMoneda(monto: number, moneda: MonedaSecundaria): string {
+  return new Intl.NumberFormat(LOCALE_POR_MONEDA[moneda], {
+    style: "currency",
+    currency: moneda,
+    maximumFractionDigits: moneda === "CLP" ? 0 : 2,
+  }).format(monto);
 }
 
 export function formatARS(monto: number): string {
@@ -22,6 +38,13 @@ export function formatUSD(monto: number): string {
 
 export function formatMonto(monto: number, moneda: Moneda): string {
   return moneda === "USD" ? formatUSD(monto) : formatARS(monto);
+}
+
+export function formatSecundaria(
+  monto: number,
+  moneda: MonedaSecundaria
+): string {
+  return formatMoneda(monto, moneda);
 }
 
 export function formatARSCompacto(monto: number): string {

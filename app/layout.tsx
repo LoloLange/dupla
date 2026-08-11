@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { PreferenciasProvider } from "@/components/PreferenciasProvider";
 import { Favicon } from "@/components/Favicon";
 import { TEMAS } from "@/lib/temas-data";
 import "./globals.css";
@@ -42,8 +43,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-dvh">
         <ThemeProvider>
-          <Favicon />
-          {children}
+          <PreferenciasProvider>
+            <Favicon />
+            {children}
+          </PreferenciasProvider>
         </ThemeProvider>
       </body>
     </html>

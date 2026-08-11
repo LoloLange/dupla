@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Gasto, Moneda, Tipo } from "@/lib/types";
+import { infoMonedaSecundaria } from "@/lib/types";
+import type { MonedaSecundaria } from "@/lib/types";
 import {
   formatARS,
   formatUSD,
+  formatSecundaria,
   formatMonto,
   inicioDeRango,
   etiquetaRango,
@@ -43,10 +46,12 @@ export function Patrimonio({
   gastos,
   cargando: gastosCargando = false,
   rango = "mes",
+  monedaSecundaria = "USD",
 }: {
   gastos: Gasto[];
   cargando?: boolean;
   rango?: RangoFecha;
+  monedaSecundaria?: MonedaSecundaria | null;
 }) {
   const [saldo, setSaldo] = useState<Saldo | null>(null);
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[] | null>(null);
@@ -54,7 +59,7 @@ export function Patrimonio({
   const [selectorAbierto, setSelectorAbierto] = useState(false);
   const [refrescando, setRefrescando] = useState(false);
   const cargadoRef = useRef(false);
-  const cotizacionCargadaRef = useRef(false);
+  const monedaRef = useRef<MonedaSecundaria | null>(null);
 
   useEffect(() => {
     if (cargadoRef.current) return;
@@ -70,32 +75,56 @@ export function Patrimonio({
   const cargandoSaldo = saldo === null;
   const cargando = cargandoSaldo || gastosCargando;
 
-  const cargarCotizaciones = useCallback(async (fuerza?: boolean) => {
-    setRefrescando(true);
-    try {
-      const res = await fetch(
-        `/api/cotizacion${fuerza ? `?r=${Date.now()}` : ""}`,
-        { cache: "no-store" }
-      );
-      if (!res.ok) throw new Error("fallo");
-      const data = (await res.json()) as Cotizacion[];
-      if (Array.isArray(data) && data.length > 0) setCotizaciones(data);
-    } catch {
-      // sin cotización se muestra degradado
-    } finally {
-      setRefrescando(false);
-    }
-  }, []);
+  const cargarCotizaciones = useCallback(
+    async (fuerza?: boolean) => {
+      if (!monedaSecundaria) return;
+      setRefrescando(true);
+      try {
+        const moneda = monedaSecundaria;
+        if (monedaRef.current !== moneda) {
+          setCotizaciones(null);
+          monedaRef.current = moneda;
+        }
+        const res = await fetch(
+          `/api/cotizacion${moneda === "USD" ? "" : `?moneda=${moneda}`}${
+            fuerza ? `${moneda === "USD" ? "?" : "&"}r=${Date.now()}` : ""
+          }`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) throw new Error("fallo");
+        const data = (await res.json()) as Cotizacion[];
+        if (Array.isArray(data) && data.length > 0) {
+          setCotizaciones(data);
+        }
+      } catch {
+        // sin cotización se muestra degradado
+      } finally {
+        setRefrescando(false);
+      }
+    },
+    [monedaSecundaria]
+  );
 
   useEffect(() => {
-    if (cotizacionCargadaRef.current) return;
-    cotizacionCargadaRef.current = true;
+    if (!monedaSecundaria) {
+      if (monedaRef.current !== null) {
+        monedaRef.current = null;
+      }
+      return;
+    }
+    if (monedaRef.current === monedaSecundaria) return;
+    monedaRef.current = monedaSecundaria;
+    setCotizaciones(null);
     void cargarCotizaciones();
-  }, [cargarCotizaciones]);
+  }, [monedaSecundaria, cargarCotizaciones]);
 
+  const esUsd = monedaSecundaria === "USD";
   const cotizacion = cotizaciones?.find((c) => c.casa === casa) ?? null;
   const cotizacionNombre = cotizacion?.nombre ?? casa;
   const cotizacionCargando = cotizaciones === null;
+  const infoSecundaria = monedaSecundaria
+    ? infoMonedaSecundaria(monedaSecundaria)
+    : null;
 
   const elegirCasa = useCallback(
     (nueva: string) => {
@@ -122,9 +151,10 @@ export function Patrimonio({
 
   const totalARS = datosMoneda("ARS").total;
   const totalUSD = datosMoneda("USD").total;
+  const cotizacionVenta = cotizacion?.venta ?? null;
   const patrimonioCombinado =
-    cotizacion && !cargando
-      ? totalARS + totalUSD * cotizacion.venta
+    cotizacionVenta !== null && !cargando
+      ? totalARS + totalUSD * cotizacionVenta
       : null;
 
   const tarjeta = (moneda: Moneda, d: DatosMoneda) => {
@@ -147,7 +177,7 @@ export function Patrimonio({
               esArs ? "text-ars-strong" : "text-usd-strong"
             )}
           >
-            {esArs ? "$ PESOS" : "U$S DÓLARES"}
+            {esArs ? "$ PESOS" : `${infoSecundaria?.simbolo ?? "U$S"} ${infoSecundaria?.plural ?? "DÓLARES"}`}
           </span>
         </div>
 
@@ -164,6 +194,8 @@ export function Patrimonio({
             />
           ) : esArs ? (
             formatARS(total)
+          ) : monedaSecundaria ? (
+            formatSecundaria(total, monedaSecundaria)
           ) : (
             formatUSD(total)
           )}
@@ -214,101 +246,106 @@ export function Patrimonio({
             Balance total
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => void cargarCotizaciones(true)}
-              disabled={refrescando}
-              aria-label="Actualizar cotizaciones del dólar"
-              className="grid size-7 cursor-pointer place-items-center rounded-full text-sub transition-colors hover:bg-surface-2 hover:text-ink disabled:cursor-default disabled:opacity-50"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className={cn("size-4", refrescando && "animate-spin")}
-                style={refrescando ? { animation: "spin-soft 0.8s linear infinite" } : undefined}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4h-4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <div className="relative">
+            {monedaSecundaria && (
               <button
                 type="button"
-                onClick={() => setSelectorAbierto((v) => !v)}
-                aria-expanded={selectorAbierto}
-                aria-haspopup="listbox"
-                aria-label="Elegir tipo de dólar"
-                className="flex cursor-pointer items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium text-sub transition-colors hover:bg-surface-2 hover:text-ink"
+                onClick={() => void cargarCotizaciones(true)}
+                disabled={refrescando}
+                aria-label="Actualizar cotizaciones"
+                className="grid size-7 cursor-pointer place-items-center rounded-full text-sub transition-colors hover:bg-surface-2 hover:text-ink disabled:cursor-default disabled:opacity-50"
               >
-                <span>
-                  {cotizacionCargando ? "Dólar" : cotizacionNombre}
-                </span>
                 <svg
                   viewBox="0 0 24 24"
-                  className={cn("size-3.5 transition-transform", selectorAbierto && "rotate-180")}
+                  className={cn("size-4", refrescando && "animate-spin")}
+                  style={refrescando ? { animation: "spin-soft 0.8s linear infinite" } : undefined}
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
                 >
-                  <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4h-4" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
-
-              {selectorAbierto && cotizaciones && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40 cursor-default"
-                    onClick={() => setSelectorAbierto(false)}
-                    aria-hidden
-                  />
-                  <div
-                    role="listbox"
-                    aria-label="Tipo de dólar"
-                    className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-2xl anim-pop-in"
-                  >
-                    {cotizaciones.map((c) => {
-                      const activa = c.casa === casa;
-                      return (
-                        <button
-                          key={c.casa}
-                          type="button"
-                          role="option"
-                          aria-selected={activa}
-                          onClick={() => elegirCasa(c.casa)}
-                          className={cn(
-                            "flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm transition-colors",
-                            activa
-                              ? "bg-ars-soft text-ink"
-                              : "text-sub hover:bg-surface-2 hover:text-ink"
-                          )}
-                        >
-                          <span className="truncate font-medium">{c.nombre}</span>
-                          <span className="shrink-0 font-mono text-xs tabular-nums text-usd-strong">
-                            {formatARS(c.venta)}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-            {cotizacionCargando ? (
-              <span className="h-4 w-14 rounded-md skeleton" aria-hidden />
-            ) : cotizacion ? (
-              <a
-                href="https://dolarapi.com/docs/"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Ver documentación de DolarAPI"
-                className="cursor-pointer font-mono text-sm font-semibold tabular-nums text-usd-strong underline-offset-2 transition-colors hover:underline"
-              >
-                {formatARS(cotizacion.venta)}
-              </a>
-            ) : (
-              <span className="font-mono text-sm text-faint">—</span>
             )}
+            {esUsd && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setSelectorAbierto((v) => !v)}
+                  aria-expanded={selectorAbierto}
+                  aria-haspopup="listbox"
+                  aria-label="Elegir tipo de dólar"
+                  className="flex cursor-pointer items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium text-sub transition-colors hover:bg-surface-2 hover:text-ink"
+                >
+                  <span>
+                    {cotizacionCargando ? "Dólar" : cotizacionNombre}
+                  </span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    className={cn("size-3.5 transition-transform", selectorAbierto && "rotate-180")}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+
+                {selectorAbierto && cotizaciones && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40 cursor-default"
+                      onClick={() => setSelectorAbierto(false)}
+                      aria-hidden
+                    />
+                    <div
+                      role="listbox"
+                      aria-label="Tipo de dólar"
+                      className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-2xl anim-pop-in"
+                    >
+                      {cotizaciones.map((c) => {
+                        const activa = c.casa === casa;
+                        return (
+                          <button
+                            key={c.casa}
+                            type="button"
+                            role="option"
+                            aria-selected={activa}
+                            onClick={() => elegirCasa(c.casa)}
+                            className={cn(
+                              "flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm transition-colors",
+                              activa
+                                ? "bg-ars-soft text-ink"
+                                : "text-sub hover:bg-surface-2 hover:text-ink"
+                            )}
+                          >
+                            <span className="truncate font-medium">{c.nombre}</span>
+                            <span className="shrink-0 font-mono text-xs tabular-nums text-usd-strong">
+                              {formatARS(c.venta)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            {esUsd &&
+              (cotizacionCargando ? (
+                <span className="h-4 w-14 rounded-md skeleton" aria-hidden />
+              ) : cotizacion ? (
+                <a
+                  href="https://dolarapi.com/docs/"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Ver documentación de DolarAPI"
+                  className="cursor-pointer font-mono text-sm font-semibold tabular-nums text-usd-strong underline-offset-2 transition-colors hover:underline"
+                >
+                  {formatARS(cotizacion.venta)}
+                </a>
+              ) : (
+                <span className="font-mono text-sm text-faint">—</span>
+              ))}
           </div>
         </div>
 
@@ -323,17 +360,19 @@ export function Patrimonio({
             Sin cotización para combinar
           </p>
         )}
-        {!cargando && (
+        {!cargando && monedaSecundaria && (
           <p className="mt-1 text-[11px] text-faint">
             combinando pesos y dólares a {cotizacionNombre.toLowerCase()}
           </p>
         )}
       </div>
 
-      <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 no-scrollbar lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0">
-        {tarjeta("ARS", datosMoneda("ARS"))}
-        {tarjeta("USD", datosMoneda("USD"))}
-      </div>
+      {monedaSecundaria ? (
+        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 no-scrollbar lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0">
+          {tarjeta("ARS", datosMoneda("ARS"))}
+          {tarjeta("USD", datosMoneda("USD"))}
+        </div>
+      ) : null}
     </section>
   );
 }

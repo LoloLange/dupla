@@ -14,6 +14,7 @@ import {
 } from "@/lib/types";
 import { inicioDeRango, type RangoFecha } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeProvider";
+import { usePreferencias } from "@/components/PreferenciasProvider";
 import { VoiceButton } from "@/components/voice/VoiceButton";
 import { ExpenseConfirmSheet } from "@/components/voice/ExpenseConfirmSheet";
 import { Patrimonio } from "@/components/dashboard/Patrimonio";
@@ -194,6 +195,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const grabadora = useVoiceRecorder();
   const gastosHook = useGastos();
+  const { monedaSecundaria } = usePreferencias();
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [errorVoz, setErrorVoz] = useState<ErrorVoz | null>(null);
   const [procesando, setProcesando] = useState<Procesando>({
@@ -613,6 +615,7 @@ export default function DashboardPage() {
               gastos={gastosFiltrados}
               cargando={gastosHook.cargando}
               rango={rango}
+              monedaSecundaria={monedaSecundaria}
             />
           </div>
         </div>
