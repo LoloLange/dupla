@@ -1,12 +1,8 @@
 "use client";
 
 import type { Moneda } from "@/lib/types";
+import { MONEDAS } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const MONEDAS: { valor: Moneda; etiqueta: string }[] = [
-  { valor: "ARS", etiqueta: "Pesos" },
-  { valor: "USD", etiqueta: "Dólares" },
-];
 
 export function FiltroMoneda({
   seleccionadas,
@@ -29,13 +25,13 @@ export function FiltroMoneda({
       aria-label="Filtrar por moneda"
       className="flex w-full items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar sm:w-auto"
     >
-      {MONEDAS.map(({ valor, etiqueta }) => {
-        const activa = seleccionadas.includes(valor);
+      {MONEDAS.map(({ codigo, etiqueta }) => {
+        const activa = seleccionadas.includes(codigo);
         return (
           <button
-            key={valor}
+            key={codigo}
             type="button"
-            onClick={() => alternar(valor)}
+            onClick={() => alternar(codigo)}
             aria-pressed={activa}
             className={cn(
               "shrink-0 cursor-pointer rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all active:scale-[0.97]",

@@ -347,9 +347,9 @@ export function UltimosGastos({
                             "font-display text-lg font-semibold tracking-tight tabular-nums",
                             gasto.tipo === "ingreso"
                               ? "text-ok"
-                              : gasto.moneda === "USD"
-                                ? "text-usd-strong"
-                                : "text-ars-strong",
+                              : gasto.moneda === "ARS"
+                                ? "text-ars-strong"
+                                : "text-usd-strong",
                           )}
                         >
                           {gasto.tipo === "ingreso" ? "+" : "−"}

@@ -46,13 +46,31 @@ export default function AjustesPage() {
   const { tema, variante, setTema, alternarVariante } = useTheme();
   const { monedaSecundaria, setMonedaSecundaria } = usePreferencias();
   const [categoria, setCategoria] = useState<CategoriaTema>("minimal");
+  const [cambioPendiente, setCambioPendiente] = useState<{
+    valor: MonedaSecundaria | null;
+    etiqueta: string;
+  } | null>(null);
 
   const temasDeCategoria = useMemo(
     () => TEMAS.filter((t) => t.categoria === categoria),
     [categoria]
   );
 
-  const elegirMoneda = (m: MonedaSecundaria) => setMonedaSecundaria(m);
+  const solicitarCambio = (m: MonedaSecundaria | null) => {
+    if (m === monedaSecundaria) return;
+    const etiqueta =
+      m === null
+        ? "sin moneda secundaria"
+        : MONEDAS_SECUNDARIAS.find((mon) => mon.codigo === m)?.etiqueta ?? m;
+    setCambioPendiente({ valor: m, etiqueta });
+  };
+
+  const confirmarCambio = () => {
+    if (cambioPendiente) {
+      setMonedaSecundaria(cambioPendiente.valor);
+    }
+    setCambioPendiente(null);
+  };
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-5 pb-16 pt-4 lg:px-10 lg:pb-16 lg:pt-8">
@@ -107,7 +125,7 @@ export default function AjustesPage() {
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             <button
               type="button"
-              onClick={() => setMonedaSecundaria(null)}
+              onClick={() => solicitarCambio(null)}
               className={`cursor-pointer rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 ${
                 monedaSecundaria === null
                   ? "border-ars bg-ars-soft shadow-md"
@@ -139,7 +157,7 @@ export default function AjustesPage() {
                 <button
                   key={m.codigo}
                   type="button"
-                  onClick={() => elegirMoneda(m.codigo)}
+                  onClick={() => solicitarCambio(m.codigo)}
                   className={`cursor-pointer rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 ${
                     activa
                       ? "border-ars bg-ars-soft shadow-md"
@@ -275,6 +293,42 @@ export default function AjustesPage() {
           </div>
         </section>
       </div>
+
+      {cambioPendiente && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/60 px-6 backdrop-blur-sm anim-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirmar cambio de moneda"
+        >
+          <div className="anim-pop-in w-full max-w-sm rounded-3xl border border-line bg-surface p-5 shadow-2xl">
+            <h3 className="font-display text-xl font-medium tracking-tight text-ink">
+              ¿Cambiar la moneda secundaria?
+            </h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-sub">
+              {cambioPendiente.valor === null
+                ? "Si elegís sin moneda secundaria, todos los gastos en otras monedas (dólares, euros, reales, pesos chilenos y uruguayos) se van a pasar a pesos automáticamente usando la cotización del día."
+                : `Si cambiás a ${cambioPendiente.etiqueta}, todos los gastos en otras monedas se van a convertir a ${cambioPendiente.etiqueta} (con los pesos como moneda puente) usando la cotización del día.`}
+            </p>
+            <div className="mt-5 flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={confirmarCambio}
+                className="cursor-pointer rounded-2xl bg-ink py-3 font-semibold text-bg transition-all hover:brightness-110 active:scale-[0.98]"
+              >
+                Cambiar
+              </button>
+              <button
+                type="button"
+                onClick={() => setCambioPendiente(null)}
+                className="cursor-pointer rounded-2xl border border-line py-3 font-medium text-sub transition-colors hover:bg-surface-2 hover:text-ink"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

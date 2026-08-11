@@ -1,11 +1,11 @@
 import { groqChatJson } from "@/lib/groq/client";
 import type { GastoParseado } from "@/lib/types";
-import { esCategoria } from "@/lib/types";
+import { esCategoria, esMoneda } from "@/lib/types";
 
 export const MODELO_PARSE = "llama-3.3-70b-versatile";
 
 const SISTEMA = `
-Sos Dupla, la compañera de gastos de una persona argentina que maneja dos monedas: pesos argentinos (ARS) y dólares (USD). Si menciona otras monedas (euros, reales, pesos chilenos o uruguayos), las convertís a pesos.
+Sos Dupla, la compañera de gastos de una persona argentina que maneja varias monedas: pesos argentinos (ARS), dólares (USD), euros (EUR), reales (BRL), pesos chilenos (CLP) y pesos uruguayos (UYU). Cada movimiento se anota en la moneda en la que se hizo, sin convertirlo.
 
 Convertís frases habladas y coloquiales sobre plata en un JSON con esta forma EXACTA:
 {
@@ -13,7 +13,7 @@ Convertís frases habladas y coloquiales sobre plata en un JSON con esta forma E
     {
       "tipo": "gasto" | "ingreso",
       "monto": number,
-      "moneda": "ARS" | "USD",
+      "moneda": "ARS" | "USD" | "EUR" | "BRL" | "CLP" | "UYU",
       "categoria": string,
       "descripcion": string,
       "fecha": string,  // fecha y hora LOCAL del usuario, SIN zona horaria, ej: "2026-08-06T14:30:00"
@@ -32,7 +32,7 @@ Reglas:
 - Interpretá las monedas: "pesos", "$", "plata", "lucas", "mangos", "8000" -> ARS. "dólares", "usd", "dolares", "verdes", "green", "u$s" -> USD.
 - "peso" SIN más contexto SIEMPRE es el argentino (ARS): "1000 pesos" -> 1000 ARS. "peso chileno" o "peso uruguayo" SOLO si la frase lo dice completo (ej: "20 mil pesos chilenos" -> CLP, "500 pesos uruguayos" -> UYU).
 - Podés reconocer otras monedas si la frase las nombra: "euros", "euro" -> EUR; "reales", "real" (moneda de Brasil) -> BRL; "pesos chilenos", "lucas chilenas", "CLP" -> CLP; "pesos uruguayos", "UYU" -> UYU.
-- En el JSON, "moneda" SOLO puede ser "ARS" o "USD". Si el movimiento es en euros, reales, pesos chilenos o uruguayos, convertí a ARS usando el valor de la cotización del día (1 EUR ≈ 1700 ARS, 1 BRL ≈ 290 ARS, 1 CLP ≈ 1.6 ARS, 1 UYU ≈ 37 ARS) y aclaralo en "descripcion" entre paréntesis, ej: "Café en Roma (50 EUR)".
+- NUNCA conviertas entre monedas: cada movimiento se anota en su moneda original, con su monto original y sin aclaraciones entre paréntesis. Ej: "gasté 50 euros en Roma" -> {"monto": 50, "moneda": "EUR", "descripcion": "Café en Roma"}.
 - "mil" = 1000, "lucas" = mil, "palos" = millón. "8 mil" = 8000, "dos mil quinientos" = 2500, "15 dolares" = 15 USD.
 - Elegí la categoría más cercana de esta lista fija: Supermercado, Comida y bares, Transporte, Vivienda, Servicios, Salud, Entretenimiento, Suscripciones, Educación, Otros.
   - Supermercado: supermercado, chino, almacén, kiosco, verdulería, fiambrería, carnicería, coto, carrefour, jumbo.
@@ -129,7 +129,8 @@ function normalizarUno(
   const monto = parsearMonto(r.monto);
 
   const tipo = r.tipo === "ingreso" ? "ingreso" : "gasto";
-  const moneda = r.moneda === "USD" ? "USD" : "ARS";
+  const monedaRaw = typeof r.moneda === "string" ? r.moneda : "";
+  const moneda = esMoneda(monedaRaw) ? monedaRaw : "ARS";
 
   let categoria = typeof r.categoria === "string" ? r.categoria.trim() : "Otros";
   if (!esCategoria(categoria)) {

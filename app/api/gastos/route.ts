@@ -7,7 +7,7 @@ import {
   recurrenciaDesdeFila,
 } from "@/lib/recurrencia";
 
-const MONEDAS = ["ARS", "USD"] as const;
+const MONEDAS = ["ARS", "USD", "EUR", "BRL", "CLP", "UYU"] as const;
 const TIPOS = ["gasto", "ingreso"] as const;
 
 const recurrenciaSchema = z.discriminatedUnion("frecuencia", [

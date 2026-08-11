@@ -13,10 +13,26 @@ const LOCALE_POR_MONEDA: Record<MonedaSecundaria, string> = {
 };
 
 export function formatMoneda(monto: number, moneda: MonedaSecundaria): string {
+  if (moneda === "EUR") {
+    return `€${new Intl.NumberFormat("es-AR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(monto)}`;
+  }
+  if (moneda === "CLP") {
+    return `$${new Intl.NumberFormat("es-CL", {
+      maximumFractionDigits: 0,
+    }).format(monto)} CLP`;
+  }
+  if (moneda === "UYU") {
+    return `$${new Intl.NumberFormat("es-UY", {
+      maximumFractionDigits: 2,
+    }).format(monto)} UYU`;
+  }
   return new Intl.NumberFormat(LOCALE_POR_MONEDA[moneda], {
     style: "currency",
     currency: moneda,
-    maximumFractionDigits: moneda === "CLP" ? 0 : 2,
+    maximumFractionDigits: 2,
   }).format(monto);
 }
 
@@ -37,7 +53,8 @@ export function formatUSD(monto: number): string {
 }
 
 export function formatMonto(monto: number, moneda: Moneda): string {
-  return moneda === "USD" ? formatUSD(monto) : formatARS(monto);
+  if (moneda === "ARS") return formatARS(monto);
+  return formatMoneda(monto, moneda);
 }
 
 export function formatSecundaria(

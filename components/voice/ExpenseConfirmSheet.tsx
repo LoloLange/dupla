@@ -8,7 +8,7 @@ import type {
   RecurrenciaFrecuencia,
   Tipo,
 } from "@/lib/types";
-import { CATEGORIAS, esCategoria } from "@/lib/types";
+import { CATEGORIAS, esCategoria, MONEDAS } from "@/lib/types";
 import { cn, formatMonto } from "@/lib/utils";
 import { Checkmark } from "@/components/voice/Checkmark";
 import { NOMBRES_DIAS_SEMANA } from "@/lib/recurrencia";
@@ -512,14 +512,14 @@ export function ExpenseConfirmSheet({
               </div>
 
               <div className="mb-4 flex items-center gap-3">
-                <div className="flex rounded-2xl bg-surface-2 p-1.5">
-                  {(["ARS", "USD"] as const).map((m) => (
+                <div className="flex flex-wrap rounded-2xl bg-surface-2 p-1.5">
+                  {MONEDAS.map(({ codigo: m }) => (
                     <button
                       key={m}
                       type="button"
                       onClick={() => setMoneda(m)}
                       className={cn(
-                        "cursor-pointer rounded-xl px-4 py-2 font-mono text-sm font-semibold transition-all",
+                        "cursor-pointer rounded-xl px-3 py-2 font-mono text-sm font-semibold transition-all",
                         moneda === m
                           ? m === "ARS"
                             ? "bg-ars text-white shadow"

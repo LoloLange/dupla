@@ -1,6 +1,19 @@
-export type Moneda = "ARS" | "USD";
+export type Moneda = "ARS" | "USD" | "EUR" | "BRL" | "CLP" | "UYU";
 
-export type MonedaSecundaria = "USD" | "EUR" | "BRL" | "CLP" | "UYU";
+export type MonedaSecundaria = Exclude<Moneda, "ARS">;
+
+export const MONEDAS: { codigo: Moneda; etiqueta: string }[] = [
+  { codigo: "ARS", etiqueta: "Pesos" },
+  { codigo: "USD", etiqueta: "Dólares" },
+  { codigo: "EUR", etiqueta: "Euros" },
+  { codigo: "BRL", etiqueta: "Reales" },
+  { codigo: "CLP", etiqueta: "Pesos chilenos" },
+  { codigo: "UYU", etiqueta: "Pesos uruguayos" },
+];
+
+export function esMoneda(valor: string): valor is Moneda {
+  return MONEDAS.some((m) => m.codigo === valor);
+}
 
 export type Tipo = "gasto" | "ingreso";
 

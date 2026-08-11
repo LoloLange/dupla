@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Gasto, Recurrencia } from "@/lib/types";
+import type { Gasto, Moneda, Recurrencia } from "@/lib/types";
 
 export type DatosMovimiento = {
   monto: number;
-  moneda: "ARS" | "USD";
+  moneda: Moneda;
   tipo: "gasto" | "ingreso";
   categoria: string;
   descripcion: string;

@@ -1,12 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Gasto, Moneda, Tipo } from "@/lib/types";
+import type { Gasto, Moneda, MonedaSecundaria } from "@/lib/types";
 import { infoMonedaSecundaria } from "@/lib/types";
-import type { MonedaSecundaria } from "@/lib/types";
 import {
   formatARS,
-  formatUSD,
   formatSecundaria,
   formatMonto,
   inicioDeRango,
@@ -16,31 +14,36 @@ import {
 import { cn } from "@/lib/utils";
 
 type Saldo = { ARS: number; USD: number };
-type Cotizacion = { casa: string; nombre: string; compra: number; venta: number };
-
-function montoEnRango(
-  gastos: Gasto[],
-  moneda: Moneda,
-  tipo: Tipo,
-  rango: RangoFecha
-): number {
-  const desde = inicioDeRango(rango);
-  return gastos
-    .filter(
-      (g) =>
-        g.moneda === moneda &&
-        g.tipo === tipo &&
-        new Date(g.fecha) >= desde
-    )
-    .reduce((acc, g) => acc + Number(g.monto), 0);
-}
-
-type DatosMoneda = {
-  saldoActual: number;
-  gastado: number;
-  ingresado: number;
-  total: number;
+type Cotizacion = {
+  casa: string;
+  nombre: string;
+  compra: number;
+  venta: number;
+  moneda?: string;
 };
+
+type DatosTarjeta = { gastado: number; ingresado: number; total: number };
+
+function totalesEn(
+  gastos: Gasto[],
+  rango: RangoFecha,
+  destino: Moneda,
+  convertir: (monto: number, desde: Moneda, hasta: Moneda) => number | null,
+  incluir: (moneda: Moneda) => boolean = () => true
+): DatosTarjeta {
+  const desde = inicioDeRango(rango);
+  let gastado = 0;
+  let ingresado = 0;
+  for (const g of gastos) {
+    if (new Date(g.fecha) < desde) continue;
+    if (!incluir(g.moneda)) continue;
+    const valor = convertir(Number(g.monto), g.moneda, destino);
+    if (valor === null) continue;
+    if (g.tipo === "gasto") gastado += valor;
+    else ingresado += valor;
+  }
+  return { gastado, ingresado, total: ingresado - gastado };
+}
 
 export function Patrimonio({
   gastos,
@@ -54,12 +57,15 @@ export function Patrimonio({
   monedaSecundaria?: MonedaSecundaria | null;
 }) {
   const [saldo, setSaldo] = useState<Saldo | null>(null);
-  const [cotizaciones, setCotizaciones] = useState<Cotizacion[] | null>(null);
+  const [oficiales, setOficiales] = useState<Cotizacion[] | null>(null);
+  const [dolares, setDolares] = useState<Cotizacion[] | null>(null);
   const [casa, setCasa] = useState("oficial");
   const [selectorAbierto, setSelectorAbierto] = useState(false);
   const [refrescando, setRefrescando] = useState(false);
   const cargadoRef = useRef(false);
   const monedaRef = useRef<MonedaSecundaria | null>(null);
+  const oficialesRef = useRef<Cotizacion[] | null>(null);
+  const dolaresRef = useRef<Cotizacion[] | null>(null);
 
   useEffect(() => {
     if (cargadoRef.current) return;
@@ -72,94 +78,157 @@ export function Patrimonio({
       .catch(() => setSaldo({ ARS: 0, USD: 0 }));
   }, []);
 
-  const cargandoSaldo = saldo === null;
-  const cargando = cargandoSaldo || gastosCargando;
-
-  const cargarCotizaciones = useCallback(
-    async (fuerza?: boolean) => {
-      if (!monedaSecundaria) return;
-      setRefrescando(true);
-      try {
-        const moneda = monedaSecundaria;
-        if (monedaRef.current !== moneda) {
-          setCotizaciones(null);
-          monedaRef.current = moneda;
+  const cargarCotizaciones = useCallback(async (fuerza = false) => {
+    if (fuerza) setRefrescando(true);
+    try {
+      if (fuerza || !oficialesRef.current) {
+        const res = await fetch("/api/cotizacion?oficiales=1", {
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const data = (await res.json()) as Cotizacion[];
+          if (Array.isArray(data) && data.length > 0) {
+            oficialesRef.current = data;
+            setOficiales(data);
+          }
         }
-        const res = await fetch(
-          `/api/cotizacion${moneda === "USD" ? "" : `?moneda=${moneda}`}${
-            fuerza ? `${moneda === "USD" ? "?" : "&"}r=${Date.now()}` : ""
-          }`,
-          { cache: "no-store" }
-        );
-        if (!res.ok) throw new Error("fallo");
-        const data = (await res.json()) as Cotizacion[];
-        if (Array.isArray(data) && data.length > 0) {
-          setCotizaciones(data);
-        }
-      } catch {
-        // sin cotización se muestra degradado
-      } finally {
-        setRefrescando(false);
       }
-    },
-    [monedaSecundaria]
-  );
+      const moneda = monedaSecundaria;
+      if (moneda === "USD") {
+        if (fuerza || !dolaresRef.current || monedaRef.current !== "USD") {
+          const res = await fetch("/api/cotizacion", { cache: "no-store" });
+          if (res.ok) {
+            const data = (await res.json()) as Cotizacion[];
+            if (Array.isArray(data) && data.length > 0) {
+              dolaresRef.current = data;
+              setDolares(data);
+            }
+          }
+        }
+      } else if (moneda && monedaRef.current !== moneda) {
+        dolaresRef.current = null;
+        setDolares(null);
+      }
+      monedaRef.current = moneda ?? null;
+    } catch {
+      // sin cotización se muestra degradado
+    } finally {
+      if (fuerza) setRefrescando(false);
+    }
+  }, [monedaSecundaria]);
 
   useEffect(() => {
-    if (!monedaSecundaria) {
-      if (monedaRef.current !== null) {
-        monedaRef.current = null;
-      }
-      return;
-    }
-    if (monedaRef.current === monedaSecundaria) return;
-    monedaRef.current = monedaSecundaria;
-    setCotizaciones(null);
-    void cargarCotizaciones();
-  }, [monedaSecundaria, cargarCotizaciones]);
+    let activo = true;
+    Promise.resolve().then(() => {
+      if (activo) void cargarCotizaciones();
+    });
+    return () => {
+      activo = false;
+    };
+  }, [cargarCotizaciones]);
 
   const esUsd = monedaSecundaria === "USD";
-  const cotizacion = cotizaciones?.find((c) => c.casa === casa) ?? null;
-  const cotizacionNombre = cotizacion?.nombre ?? casa;
-  const cotizacionCargando = cotizaciones === null;
+  const casaEfectiva =
+    esUsd && dolares?.some((c) => c.casa === casa) ? casa : "oficial";
+  const cotizacionUsd =
+    dolares?.find((c) => c.casa === casaEfectiva) ??
+    oficiales?.find((c) => c.moneda === "USD") ??
+    null;
+  const cotizacionSec = esUsd
+    ? cotizacionUsd
+    : (oficiales?.find((c) => c.moneda === monedaSecundaria) ?? null);
+  const cotizacionNombre = cotizacionUsd?.nombre ?? casaEfectiva;
   const infoSecundaria = monedaSecundaria
     ? infoMonedaSecundaria(monedaSecundaria)
     : null;
 
-  const elegirCasa = useCallback(
-    (nueva: string) => {
-      setCasa(nueva);
-      setSelectorAbierto(false);
+  const tasaAARS = useCallback(
+    (moneda: Moneda): number | null => {
+      if (moneda === "ARS") return 1;
+      if (moneda === "USD") return cotizacionUsd?.venta ?? null;
+      return oficiales?.find((c) => c.moneda === moneda)?.venta ?? null;
     },
-    []
+    [cotizacionUsd, oficiales]
   );
 
-  const datosMoneda = useCallback(
-    (moneda: Moneda): DatosMoneda => {
-      const saldoActual = saldo?.[moneda] ?? 0;
-      const gastado = montoEnRango(gastos, moneda, "gasto", rango);
-      const ingresado = montoEnRango(gastos, moneda, "ingreso", rango);
-      return {
-        saldoActual,
-        gastado,
-        ingresado,
-        total: saldoActual + ingresado - gastado,
-      };
+  const convertir = useCallback(
+    (monto: number, desde: Moneda, hasta: Moneda): number | null => {
+      if (desde === hasta) return monto;
+      const tasaDesde = tasaAARS(desde);
+      const tasaHasta = tasaAARS(hasta);
+      if (tasaDesde === null || tasaHasta === null) return null;
+      return (monto * tasaDesde) / tasaHasta;
     },
-    [saldo, gastos, rango]
+    [tasaAARS]
   );
 
-  const totalARS = datosMoneda("ARS").total;
-  const totalUSD = datosMoneda("USD").total;
-  const cotizacionVenta = cotizacion?.venta ?? null;
-  const patrimonioCombinado =
-    cotizacionVenta !== null && !cargando
-      ? totalARS + totalUSD * cotizacionVenta
-      : null;
+  const elegirCasa = useCallback((nueva: string) => {
+    setCasa(nueva);
+    setSelectorAbierto(false);
+  }, []);
 
-  const tarjeta = (moneda: Moneda, d: DatosMoneda) => {
-    const esArs = moneda === "ARS";
-    const { gastado, ingresado, total } = d;
+  const cargandoSaldo = saldo === null;
+  const cargando = cargandoSaldo || gastosCargando;
+  const cotizacionCargando = esUsd
+    ? cotizacionUsd === null
+    : monedaSecundaria
+      ? cotizacionSec === null
+      : oficiales === null;
+
+  const datosArs = totalesEn(
+    gastos,
+    rango,
+    "ARS",
+    convertir,
+    (m) => m === "ARS"
+  );
+  const datosSec = monedaSecundaria
+    ? totalesEn(
+        gastos,
+        rango,
+        monedaSecundaria,
+        convertir,
+        (m) => m !== "ARS"
+      )
+    : null;
+  const totalArs = (saldo?.ARS ?? 0) + datosArs.total;
+
+  const holdingsSec =
+    monedaSecundaria && saldo
+      ? monedaSecundaria === "USD"
+        ? saldo.USD
+        : (convertir(saldo.USD, "USD", monedaSecundaria) ?? 0)
+      : 0;
+  const totalSec =
+    datosSec && monedaSecundaria ? holdingsSec + datosSec.total : null;
+
+  let balance: number | null = null;
+  if (!cargando && !cotizacionCargando) {
+    if (monedaSecundaria && totalSec !== null) {
+      const tasaSec = tasaAARS(monedaSecundaria);
+      if (tasaSec !== null) {
+        balance = totalArs + totalSec * tasaSec;
+      }
+    } else if (!monedaSecundaria) {
+      balance = saldo?.ARS ?? 0;
+      const tasaUsd = tasaAARS("USD");
+      if (tasaUsd !== null) balance += (saldo?.USD ?? 0) * tasaUsd;
+      const desde = inicioDeRango(rango);
+      for (const g of gastos) {
+        if (new Date(g.fecha) < desde) continue;
+        const valor = convertir(Number(g.monto), g.moneda, "ARS");
+        if (valor === null) continue;
+        balance += g.tipo === "gasto" ? -valor : valor;
+      }
+    }
+  }
+
+  const tarjeta = ({
+    esArs,
+    gastado,
+    ingresado,
+    total,
+  }: DatosTarjeta & { esArs: boolean }) => {
     const enRojo = total < 0;
     return (
       <div
@@ -177,7 +246,11 @@ export function Patrimonio({
               esArs ? "text-ars-strong" : "text-usd-strong"
             )}
           >
-            {esArs ? "$ PESOS" : `${infoSecundaria?.simbolo ?? "U$S"} ${infoSecundaria?.plural ?? "DÓLARES"}`}
+            {esArs
+              ? "$ PESOS"
+              : `${infoSecundaria?.simbolo ?? "U$S"} ${
+                  infoSecundaria?.plural ?? "DÓLARES"
+                }`}
           </span>
         </div>
 
@@ -188,16 +261,13 @@ export function Patrimonio({
           )}
         >
           {cargando ? (
-            <span
-              className="block h-10 w-40 rounded-xl skeleton"
-              aria-hidden
-            />
+            <span className="block h-10 w-40 rounded-xl skeleton" aria-hidden />
           ) : esArs ? (
             formatARS(total)
           ) : monedaSecundaria ? (
             formatSecundaria(total, monedaSecundaria)
           ) : (
-            formatUSD(total)
+            formatARS(total)
           )}
         </p>
 
@@ -214,7 +284,7 @@ export function Patrimonio({
             <p>
               Gastaste{" "}
               <span className="font-semibold text-ink">
-                {formatMonto(gastado, moneda)}
+                {formatMonto(gastado, esArs ? "ARS" : (monedaSecundaria ?? "ARS"))}
               </span>{" "}
               {etiquetaRango(rango)}
             </p>
@@ -225,7 +295,7 @@ export function Patrimonio({
             <p>
               Ingresaste{" "}
               <span className="font-semibold text-ok">
-                {formatMonto(ingresado, moneda)}
+                {formatMonto(ingresado, esArs ? "ARS" : (monedaSecundaria ?? "ARS"))}
               </span>{" "}
               {etiquetaRango(rango)}
             </p>
@@ -290,7 +360,7 @@ export function Patrimonio({
                   </svg>
                 </button>
 
-                {selectorAbierto && cotizaciones && (
+                {selectorAbierto && dolares && (
                   <>
                     <div
                       className="fixed inset-0 z-40 cursor-default"
@@ -302,8 +372,8 @@ export function Patrimonio({
                       aria-label="Tipo de dólar"
                       className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-2xl anim-pop-in"
                     >
-                      {cotizaciones.map((c) => {
-                        const activa = c.casa === casa;
+                      {dolares.map((c) => {
+                        const activa = c.casa === casaEfectiva;
                         return (
                           <button
                             key={c.casa}
@@ -330,10 +400,10 @@ export function Patrimonio({
                 )}
               </div>
             )}
-            {esUsd &&
+            {monedaSecundaria &&
               (cotizacionCargando ? (
                 <span className="h-4 w-14 rounded-md skeleton" aria-hidden />
-              ) : cotizacion ? (
+              ) : (esUsd ? cotizacionUsd : cotizacionSec) ? (
                 <a
                   href="https://dolarapi.com/docs/"
                   target="_blank"
@@ -341,7 +411,7 @@ export function Patrimonio({
                   aria-label="Ver documentación de DolarAPI"
                   className="cursor-pointer font-mono text-sm font-semibold tabular-nums text-usd-strong underline-offset-2 transition-colors hover:underline"
                 >
-                  {formatARS(cotizacion.venta)}
+                  {formatARS((esUsd ? cotizacionUsd : cotizacionSec)!.venta)}
                 </a>
               ) : (
                 <span className="font-mono text-sm text-faint">—</span>
@@ -349,11 +419,11 @@ export function Patrimonio({
           </div>
         </div>
 
-        {cargando ? (
+        {cargando || cotizacionCargando ? (
           <span className="mt-1.5 block h-8 w-48 rounded-lg skeleton" aria-hidden />
-        ) : patrimonioCombinado !== null ? (
+        ) : balance !== null ? (
           <p className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-ink tabular-nums">
-            {formatARS(patrimonioCombinado)}
+            {formatARS(balance)}
           </p>
         ) : (
           <p className="mt-1.5 text-sm text-faint">
@@ -362,15 +432,25 @@ export function Patrimonio({
         )}
         {!cargando && monedaSecundaria && (
           <p className="mt-1 text-[11px] text-faint">
-            combinando pesos y dólares a {cotizacionNombre.toLowerCase()}
+            combinando pesos y{" "}
+            {(infoSecundaria?.plural ?? "dólares").toLowerCase()} a{" "}
+            {esUsd
+              ? cotizacionNombre.toLowerCase()
+              : (cotizacionSec?.nombre ?? "oficial").toLowerCase()}
           </p>
         )}
       </div>
 
       {monedaSecundaria ? (
         <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 no-scrollbar lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0">
-          {tarjeta("ARS", datosMoneda("ARS"))}
-          {tarjeta("USD", datosMoneda("USD"))}
+          {tarjeta({ esArs: true, ...datosArs })}
+          {totalSec !== null &&
+            tarjeta({
+              esArs: false,
+              gastado: datosSec?.gastado ?? 0,
+              ingresado: datosSec?.ingresado ?? 0,
+              total: totalSec,
+            })}
         </div>
       ) : null}
     </section>
