@@ -11,6 +11,8 @@ export type DatosMovimiento = {
   descripcion: string;
   fecha: string;
   recurrencia?: Recurrencia | null;
+  tags?: string[];
+  comentario?: string;
 };
 
 export function useGastos() {

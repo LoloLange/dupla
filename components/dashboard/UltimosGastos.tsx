@@ -327,6 +327,19 @@ export function UltimosGastos({
                             {gasto.categoria} | {formatHora(gasto.fecha)}
                           </span>
                         </p>
+
+                        {gasto.tags && gasto.tags.length > 0 && (
+                          <p className="mt-1 flex flex-wrap gap-1">
+                            {gasto.tags.map((t) => (
+                              <span
+                                key={t}
+                                className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-sub"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <p

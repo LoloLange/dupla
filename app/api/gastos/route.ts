@@ -31,6 +31,8 @@ const gastoSchema = z.object({
   descripcion: z.string().max(200).default(""),
   fecha: z.string().datetime().optional(),
   recurrencia: recurrenciaSchema.nullable().optional(),
+  tags: z.array(z.string().trim().min(1).max(30)).max(20).optional(),
+  comentario: z.string().trim().max(500).optional(),
 });
 
 type FilaGasto = {
@@ -47,6 +49,8 @@ type FilaGasto = {
   recurrencia_intervalo: number | null;
   recurrencia_dia_semana: number | null;
   recurrencia_dia_mes: number | null;
+  tags: string[];
+  comentario: string | null;
 };
 
 function aGasto(fila: FilaGasto) {
@@ -61,6 +65,8 @@ function aGasto(fila: FilaGasto) {
     fecha: fila.fecha,
     created_at: fila.created_at,
     recurrencia: recurrenciaDesdeFila(fila),
+    tags: fila.tags ?? [],
+    comentario: fila.comentario,
   };
 }
 
@@ -103,7 +109,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { monto, moneda, tipo, categoria, descripcion, fecha } = parsed.data;
+  const { monto, moneda, tipo, categoria, descripcion, fecha, tags, comentario } =
+    parsed.data;
 
   const { data, error } = await supabase
     .from("gastos")
@@ -115,6 +122,8 @@ export async function POST(request: NextRequest) {
       categoria,
       descripcion,
       fecha: fecha ?? new Date().toISOString(),
+      tags: tags ?? [],
+      comentario: comentario ?? null,
     })
     .select()
     .single();
@@ -148,6 +157,9 @@ export async function PATCH(request: NextRequest) {
   const actualizacion: Record<string, unknown> = { ...resto };
   if (recurrencia !== undefined) {
     Object.assign(actualizacion, filaDesdeRecurrencia(recurrencia));
+  }
+  if (typeof actualizacion.comentario === "string" && actualizacion.comentario === "") {
+    actualizacion.comentario = null;
   }
 
   const { data, error } = await supabase

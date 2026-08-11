@@ -11,10 +11,7 @@ import type {
 import { CATEGORIAS, esCategoria } from "@/lib/types";
 import { cn, formatMonto } from "@/lib/utils";
 import { Checkmark } from "@/components/voice/Checkmark";
-import {
-  etiquetaRecurrencia,
-  NOMBRES_DIAS_SEMANA,
-} from "@/lib/recurrencia";
+import { NOMBRES_DIAS_SEMANA } from "@/lib/recurrencia";
 
 type Fase = "edit" | "saving" | "done";
 
@@ -169,6 +166,9 @@ export function ExpenseConfirmSheet({
     gasto && esCategoria(gasto.categoria) ? gasto.categoria : "Otros"
   );
   const [descripcion, setDescripcion] = useState(() => gasto?.descripcion ?? "");
+  const [tags, setTags] = useState<string[]>(() => gasto?.tags ?? []);
+  const [tagInput, setTagInput] = useState("");
+  const [comentario, setComentario] = useState(() => gasto?.comentario ?? "");
   const [fecha, setFecha] = useState(() =>
     gasto ? aDatetimeLocal(gasto.fecha) : aDatetimeLocal(new Date().toISOString())
   );
@@ -275,6 +275,17 @@ export function ExpenseConfirmSheet({
     return null;
   }, [frecuencia, diaSemana, diaMes]);
 
+  const agregarTag = useCallback(() => {
+    const t = tagInput.trim().toLowerCase().replace(/\s+/g, "-");
+    if (!t || t.length > 30 || tags.length >= 20) return;
+    setTags((prev) => (prev.includes(t) ? prev : [...prev, t]));
+    setTagInput("");
+  }, [tagInput, tags.length]);
+
+  const quitarTag = useCallback((tag: string) => {
+    setTags((prev) => prev.filter((t) => t !== tag));
+  }, []);
+
   const guardar = useCallback(
     async (alcanceElegido?: "esta" | "todas") => {
       if (!montoNumerico || fase !== "edit") return;
@@ -294,6 +305,8 @@ export function ExpenseConfirmSheet({
           categoria,
           descripcion: descripcion.trim() || categoria,
           fecha: new Date(fecha || Date.now()).toISOString(),
+          tags,
+          comentario: comentario.trim(),
           ...(gasto?.id ? { recurrencia, id: gasto.id } : {}),
         });
         setFase("done");
@@ -306,7 +319,7 @@ export function ExpenseConfirmSheet({
         setFase("edit");
       }
     },
-    [montoNumerico, fase, esSerie, construirRecurrencia, moneda, tipo, categoria, descripcion, fecha, gasto, onConfirm, onDone, salir]
+    [montoNumerico, fase, esSerie, construirRecurrencia, moneda, tipo, categoria, descripcion, tags, comentario, fecha, gasto, onConfirm, onDone, salir]
   );
 
   if (!abierto) return null;
@@ -484,6 +497,63 @@ export function ExpenseConfirmSheet({
 
               <div className="mb-4">
                 <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-sub">
+                  Tags
+                </span>
+                {tags.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {tags.map((t) => (
+                      <span
+                        key={t}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink"
+                      >
+                        {t}
+                        <button
+                          type="button"
+                          aria-label={`Quitar tag ${t}`}
+                          onClick={() => quitarTag(t)}
+                          className="grid size-4 cursor-pointer place-items-center rounded-full text-faint transition-colors hover:bg-danger/15 hover:text-danger"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="size-3"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                          >
+                            <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+                          </svg>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        agregarTag();
+                      }
+                    }}
+                    placeholder="Ej: trabajo, urgente…"
+                    maxLength={30}
+                    className="min-w-0 flex-1 rounded-2xl border border-line bg-surface-2 px-4 py-3 text-ink outline-none transition-colors placeholder:text-faint focus:border-ars"
+                  />
+                  <button
+                    type="button"
+                    onClick={agregarTag}
+                    disabled={!tagInput.trim() || tags.length >= 20}
+                    className="shrink-0 cursor-pointer rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-bg transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-default disabled:opacity-40"
+                  >
+                    Agregar
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-sub">
                   Categoría
                 </span>
                 <div className="flex gap-2 overflow-x-auto pb-1">
@@ -504,6 +574,20 @@ export function ExpenseConfirmSheet({
                   ))}
                 </div>
               </div>
+
+              <label className="mb-4 block">
+                <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-sub">
+                  Comentario
+                </span>
+                <textarea
+                  value={comentario}
+                  onChange={(e) => setComentario(e.target.value)}
+                  placeholder="Escribe un comentario…"
+                  rows={2}
+                  maxLength={500}
+                  className="w-full resize-none rounded-2xl border border-line bg-surface-2 px-4 py-3 text-ink outline-none transition-colors placeholder:text-faint focus:border-ars"
+                />
+              </label>
 
               <label className="mb-6 block">
                 <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-sub">

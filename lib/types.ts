@@ -19,6 +19,8 @@ export type Gasto = {
   fecha: string;
   created_at: string;
   recurrencia: Recurrencia | null;
+  tags: string[];
+  comentario: string | null;
 };
 
 export type GastoInput = {
@@ -29,6 +31,8 @@ export type GastoInput = {
   descripcion: string;
   fecha: string;
   recurrencia?: Recurrencia | null;
+  tags?: string[];
+  comentario?: string;
 };
 
 export type GastoParseado = Omit<GastoInput, "monto"> & {

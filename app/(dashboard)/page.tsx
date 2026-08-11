@@ -398,6 +398,8 @@ export default function DashboardPage() {
           descripcion: gasto.descripcion ?? "",
           fecha: aIsoValida(gasto.fecha),
           recurrencia: gasto.recurrencia,
+          tags: gasto.tags ?? [],
+          comentario: gasto.comentario ?? "",
         },
         clave: `editar-${gasto.id}`,
       });
@@ -460,6 +462,8 @@ export default function DashboardPage() {
                 descripcion: gasto.descripcion ?? "",
                 fecha: aIsoValida(gasto.fecha),
                 recurrencia: gasto.recurrencia ?? undefined,
+                tags: gasto.tags ?? [],
+                comentario: gasto.comentario ?? undefined,
               })
               .then((restaurado) => {
                 mostrarAviso(
