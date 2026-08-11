@@ -16,8 +16,12 @@ import {
 
 type PreferenciasContextValue = {
   monedaSecundaria: MonedaSecundaria | null;
+  verDetalleMonedas: boolean;
+  verBalance: boolean;
   cargando: boolean;
   setMonedaSecundaria: (moneda: MonedaSecundaria | null) => void;
+  setVerDetalleMonedas: (valor: boolean) => void;
+  setVerBalance: (valor: boolean) => void;
 };
 
 const PreferenciasContext = createContext<PreferenciasContextValue | null>(
@@ -32,6 +36,8 @@ export function PreferenciasProvider({
   const [monedaSecundaria, setMonedaSecundariaState] = useState<
     MonedaSecundaria | null
   >(null);
+  const [verDetalleMonedas, setVerDetalleMonedasState] = useState(true);
+  const [verBalance, setVerBalanceState] = useState(true);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
@@ -45,7 +51,7 @@ export function PreferenciasProvider({
       try {
         const res = await supabase
           .from("perfiles")
-          .select("moneda_secundaria")
+          .select("moneda_secundaria, ver_detalle_monedas, ver_balance")
           .eq("user_id", data.user.id)
           .maybeSingle();
         const valor = res.data?.moneda_secundaria ?? "USD";
@@ -53,9 +59,17 @@ export function PreferenciasProvider({
           setMonedaSecundariaState(
             esMonedaSecundaria(valor) ? valor : "USD"
           );
+          setVerDetalleMonedasState(
+            res.data?.ver_detalle_monedas ?? true
+          );
+          setVerBalanceState(res.data?.ver_balance ?? true);
         }
       } catch {
-        if (activo) setMonedaSecundariaState("USD");
+        if (activo) {
+          setMonedaSecundariaState("USD");
+          setVerDetalleMonedasState(true);
+          setVerBalanceState(true);
+        }
       } finally {
         if (activo) setCargando(false);
       }
@@ -66,31 +80,67 @@ export function PreferenciasProvider({
     };
   }, []);
 
+  const persistir = useCallback((campos: Record<string, unknown>) => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      supabase
+        .from("perfiles")
+        .upsert({
+          user_id: data.user.id,
+          ...campos,
+          updated_at: new Date().toISOString(),
+        })
+        .then(({ error }) => {
+          if (error)
+            console.error("Error guardando preferencias", error);
+        });
+    });
+  }, []);
+
   const setMonedaSecundaria = useCallback(
     (moneda: MonedaSecundaria | null) => {
       setMonedaSecundariaState(moneda);
-      const supabase = createClient();
-      supabase.auth.getUser().then(({ data }) => {
-        if (!data.user) return;
-        const fila =
-          moneda === null
-            ? { user_id: data.user.id, moneda_secundaria: null }
-            : { user_id: data.user.id, moneda_secundaria: moneda };
-        supabase
-          .from("perfiles")
-          .upsert({ ...fila, updated_at: new Date().toISOString() })
-          .then(({ error }) => {
-            if (error)
-              console.error("Error guardando moneda secundaria", error);
-          });
-      });
+      persistir({ moneda_secundaria: moneda });
     },
-    []
+    [persistir]
+  );
+
+  const setVerDetalleMonedas = useCallback(
+    (valor: boolean) => {
+      setVerDetalleMonedasState(valor);
+      persistir({ ver_detalle_monedas: valor });
+    },
+    [persistir]
+  );
+
+  const setVerBalance = useCallback(
+    (valor: boolean) => {
+      setVerBalanceState(valor);
+      persistir({ ver_balance: valor });
+    },
+    [persistir]
   );
 
   const value = useMemo<PreferenciasContextValue>(
-    () => ({ monedaSecundaria, cargando, setMonedaSecundaria }),
-    [monedaSecundaria, cargando, setMonedaSecundaria]
+    () => ({
+      monedaSecundaria,
+      verDetalleMonedas,
+      verBalance,
+      cargando,
+      setMonedaSecundaria,
+      setVerDetalleMonedas,
+      setVerBalance,
+    }),
+    [
+      monedaSecundaria,
+      verDetalleMonedas,
+      verBalance,
+      cargando,
+      setMonedaSecundaria,
+      setVerDetalleMonedas,
+      setVerBalance,
+    ]
   );
 
   return (

@@ -27,7 +27,10 @@ function MiniPreview({
       style={{ background: fondo ?? "var(--bg)" }}
     >
       <div className="w-full space-y-1.5">
-        <div className="h-1.5 w-2/3 rounded-full" style={{ background: primario ?? "var(--ars)" }} />
+        <div
+          className="h-1.5 w-2/3 rounded-full"
+          style={{ background: primario ?? "var(--ars)" }}
+        />
         <div
           className="h-1.5 w-full rounded-full"
           style={{
@@ -36,7 +39,10 @@ function MiniPreview({
               : "var(--ars-soft)",
           }}
         />
-        <div className="h-1.5 w-1/3 rounded-full" style={{ background: primario ?? "var(--ars)" }} />
+        <div
+          className="h-1.5 w-1/3 rounded-full"
+          style={{ background: primario ?? "var(--ars)" }}
+        />
       </div>
     </div>
   );
@@ -44,7 +50,14 @@ function MiniPreview({
 
 export default function AjustesPage() {
   const { tema, variante, setTema, alternarVariante } = useTheme();
-  const { monedaSecundaria, setMonedaSecundaria } = usePreferencias();
+  const {
+    monedaSecundaria,
+    setMonedaSecundaria,
+    verDetalleMonedas,
+    verBalance,
+    setVerDetalleMonedas,
+    setVerBalance,
+  } = usePreferencias();
   const [categoria, setCategoria] = useState<CategoriaTema>("minimal");
   const [cambioPendiente, setCambioPendiente] = useState<{
     valor: MonedaSecundaria | null;
@@ -53,7 +66,7 @@ export default function AjustesPage() {
 
   const temasDeCategoria = useMemo(
     () => TEMAS.filter((t) => t.categoria === categoria),
-    [categoria]
+    [categoria],
   );
 
   const solicitarCambio = (m: MonedaSecundaria | null) => {
@@ -61,7 +74,7 @@ export default function AjustesPage() {
     const etiqueta =
       m === null
         ? "sin moneda secundaria"
-        : MONEDAS_SECUNDARIAS.find((mon) => mon.codigo === m)?.etiqueta ?? m;
+        : (MONEDAS_SECUNDARIAS.find((mon) => mon.codigo === m)?.etiqueta ?? m);
     setCambioPendiente({ valor: m, etiqueta });
   };
 
@@ -121,6 +134,12 @@ export default function AjustesPage() {
             Elegí la moneda que acompaña a los pesos en tu balance. Si la
             desactivás, el dashboard muestra solo el balance total.
           </p>
+          <p className="mt-1 text-sm text-sub">
+            Si elegís una moneda secundaria, todos los gastos en otras monedas
+            van a convertirse automáticamente a esa moneda en el balance, usando
+            los pesos como moneda puente. Por ejemplo, si elegís dólares, un
+            gasto en euros se va a convertir a pesos y luego a dólares.
+          </p>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             <button
@@ -135,9 +154,7 @@ export default function AjustesPage() {
               <span className="flex items-center gap-2 text-sm font-semibold text-ink">
                 <span
                   className={`grid size-5 place-items-center rounded-full border-2 ${
-                    monedaSecundaria === null
-                      ? "border-ars"
-                      : "border-sub/40"
+                    monedaSecundaria === null ? "border-ars" : "border-sub/40"
                   }`}
                 >
                   {monedaSecundaria === null && (
@@ -170,7 +187,9 @@ export default function AjustesPage() {
                         activa ? "border-ars" : "border-sub/40"
                       }`}
                     >
-                      {activa && <span className="size-2.5 rounded-full bg-ars" />}
+                      {activa && (
+                        <span className="size-2.5 rounded-full bg-ars" />
+                      )}
                     </span>
                     {m.etiqueta}
                   </span>
@@ -183,9 +202,116 @@ export default function AjustesPage() {
           </div>
 
           <p className="mt-3 text-[11px] text-faint">
-            Las cotizaciones vienen de DolarAPI y se actualizan cada 10
-            minutos.
+            Las cotizaciones vienen de DolarAPI y se actualizan cada 10 minutos.
           </p>
+        </section>
+
+        <section className="mt-12">
+          <h2 className="font-display text-xl font-semibold tracking-tight text-ink">
+            Vista del balance
+          </h2>
+          <p className="mt-1 text-sm text-sub">
+            Elegí qué secciones se muestran en tu balance. Cada una se activa
+            por separado.
+          </p>
+
+          <div className="mt-4 space-y-2">
+            <label
+              className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all hover:-translate-y-0.5 ${
+                verDetalleMonedas
+                  ? "border-ars bg-ars-soft shadow-md"
+                  : "border-line bg-surface hover:border-sub/50"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={verDetalleMonedas}
+                onChange={(e) => setVerDetalleMonedas(e.target.checked)}
+                className="sr-only"
+              />
+              <span
+                aria-hidden
+                className={`grid size-6 shrink-0 place-items-center rounded-lg border-2 transition-colors ${
+                  verDetalleMonedas
+                    ? "border-ars bg-ars text-white"
+                    : "border-sub/40 bg-transparent"
+                }`}
+              >
+                {verDetalleMonedas && (
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="size-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                )}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-ink">
+                  Pesos y moneda secundaria
+                </span>
+                <span className="mt-0.5 block text-xs text-sub">
+                  Mostrar las tarjetas con el detalle en pesos y en la moneda
+                  secundaria.
+                </span>
+              </span>
+            </label>
+
+            <label
+              className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all hover:-translate-y-0.5 ${
+                verBalance
+                  ? "border-ars bg-ars-soft shadow-md"
+                  : "border-line bg-surface hover:border-sub/50"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={verBalance}
+                onChange={(e) => setVerBalance(e.target.checked)}
+                className="sr-only"
+              />
+              <span
+                aria-hidden
+                className={`grid size-6 shrink-0 place-items-center rounded-lg border-2 transition-colors ${
+                  verBalance
+                    ? "border-ars bg-ars text-white"
+                    : "border-sub/40 bg-transparent"
+                }`}
+              >
+                {verBalance && (
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="size-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                )}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-ink">
+                  Balance total
+                </span>
+                <span className="mt-0.5 block text-xs text-sub">
+                  Mostrar el balance combinado en pesos con la cotización del
+                  día.
+                </span>
+              </span>
+            </label>
+          </div>
         </section>
 
         <section className="mt-12">

@@ -50,11 +50,17 @@ export function Patrimonio({
   cargando: gastosCargando = false,
   rango = "mes",
   monedaSecundaria = "USD",
+  verDetalleMonedas = true,
+  verBalance = true,
+  preferenciasCargando = false,
 }: {
   gastos: Gasto[];
   cargando?: boolean;
   rango?: RangoFecha;
   monedaSecundaria?: MonedaSecundaria | null;
+  verDetalleMonedas?: boolean;
+  verBalance?: boolean;
+  preferenciasCargando?: boolean;
 }) {
   const [saldo, setSaldo] = useState<Saldo | null>(null);
   const [oficiales, setOficiales] = useState<Cotizacion[] | null>(null);
@@ -168,7 +174,7 @@ export function Patrimonio({
   }, []);
 
   const cargandoSaldo = saldo === null;
-  const cargando = cargandoSaldo || gastosCargando;
+  const cargando = cargandoSaldo || gastosCargando || preferenciasCargando;
   const cotizacionCargando = esUsd
     ? cotizacionUsd === null
     : monedaSecundaria
@@ -310,6 +316,13 @@ export function Patrimonio({
 
   return (
     <section className="anim-fade-up">
+      {preferenciasCargando && (
+        <div className="relative mb-4 rounded-2xl border border-line bg-surface px-5 py-4">
+          <span className="block h-3 w-28 rounded-md skeleton" aria-hidden />
+          <span className="mt-3 block h-8 w-48 rounded-lg skeleton" aria-hidden />
+        </div>
+      )}
+      {!preferenciasCargando && verBalance && (
       <div className="relative mb-4 rounded-2xl border border-line bg-surface px-5 py-4">
         <div className="flex items-center justify-between gap-4">
           <p className="text-xs font-semibold uppercase tracking-widest text-sub">
@@ -440,8 +453,9 @@ export function Patrimonio({
           </p>
         )}
       </div>
+      )}
 
-      {monedaSecundaria ? (
+      {!preferenciasCargando && monedaSecundaria && verDetalleMonedas ? (
         <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 no-scrollbar lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0">
           {tarjeta({ esArs: true, ...datosArs })}
           {totalSec !== null &&
@@ -453,6 +467,12 @@ export function Patrimonio({
             })}
         </div>
       ) : null}
+
+      {!preferenciasCargando && !verBalance && (!monedaSecundaria || !verDetalleMonedas) && (
+        <p className="mt-2 text-sm text-faint">
+          Elegí qué secciones mostrar desde Configuración.
+        </p>
+      )}
     </section>
   );
 }
