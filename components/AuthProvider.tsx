@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
 
 export type UsuarioAuth = {
   id: string;
@@ -47,9 +48,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<UsuarioAuth | null>(null);
   const [perfil, setPerfil] = useState<PerfilAuth | null>(null);
   const [cargando, setCargando] = useState(true);
+  const pathname = usePathname();
+  const esPaginaAuth =
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/recuperar" ||
+    pathname.startsWith("/recuperar/");
 
   useEffect(() => {
+    if (esPaginaAuth) {
+      void Promise.resolve().then(() => {
+        setUsuario(null);
+        setPerfil(null);
+        setCargando(false);
+      });
+      return;
+    }
+    if (usuario) return;
     let activo = true;
+    void Promise.resolve().then(() => setCargando(true));
     fetch("/api/auth/usuario")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -66,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       activo = false;
     };
-  }, []);
+  }, [pathname, esPaginaAuth, usuario]);
 
   const actualizar = useCallback(async (campos: CamposPerfil) => {
     const res = await fetch("/api/auth/usuario", {

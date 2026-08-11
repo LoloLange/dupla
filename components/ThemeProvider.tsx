@@ -20,7 +20,8 @@ import {
 
 const CLAVE_LOCAL = "dupla-tema";
 const CLAVE_LEGACY = "dupla-theme";
-const TEMA_AUTH = "dupla-clasico-light";
+const TEMA_AUTH_LIGHT = "dupla-clasico-light";
+const TEMA_AUTH_DARK = "dupla-clasico-dark";
 
 type ThemeContextValue = {
   tema: string;
@@ -80,15 +81,35 @@ function cargarFuente(fuente: string | null) {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { usuario, perfil, actualizar } = useAuth();
   const pathname = usePathname();
-  const esPaginaAuth = pathname === "/login" || pathname.startsWith("/login/");
+  const esPaginaAuth =
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/recuperar" ||
+    pathname.startsWith("/recuperar/");
 
   const [tema, setTemaState] = useState<string>(leerInicial);
+  const [sistemaOscuro, setSistemaOscuro] = useState<boolean>(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
+  );
 
   const setTema = useCallback((temaValor: string) => {
     setTemaState(validarTema(temaValor));
   }, []);
 
-  const temaEfectivo = esPaginaAuth ? TEMA_AUTH : tema;
+  const temaEfectivo = esPaginaAuth
+    ? sistemaOscuro
+      ? TEMA_AUTH_DARK
+      : TEMA_AUTH_LIGHT
+    : tema;
+
+  // En páginas de auth, seguir el cambio de tema del sistema en vivo
+  useEffect(() => {
+    if (!esPaginaAuth) return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onCambio = (e: MediaQueryListEvent) => setSistemaOscuro(e.matches);
+    mq.addEventListener("change", onCambio);
+    return () => mq.removeEventListener("change", onCambio);
+  }, [esPaginaAuth]);
 
   // Servidor: si no hay tema local, adoptar el tema guardado en el perfil
   const temaServidor = perfil?.tema;
