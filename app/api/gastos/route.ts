@@ -97,7 +97,7 @@ function aGasto(fila: FilaGasto) {
   };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const supabase = await createServerSupabase();
   const {
     data: { user },
@@ -105,11 +105,16 @@ export async function GET() {
 
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { data, error } = await supabase
-    .from("gastos")
-    .select("*")
-    .order("fecha", { ascending: false })
-    .limit(100);
+  const exportar = request.nextUrl.searchParams.get("exportar") === "1";
+
+  let query = supabase.from("gastos").select("*");
+  if (exportar) {
+    query = query.order("fecha", { ascending: true });
+  } else {
+    query = query.order("fecha", { ascending: false }).limit(100);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error listando gastos", error);

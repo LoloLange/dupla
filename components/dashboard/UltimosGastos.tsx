@@ -26,6 +26,7 @@ export function UltimosGastos({
   onEliminar,
   onEditar,
   onAñadirManual,
+  onImportarExportar,
   hayMasGastos = false,
   orden = "desc",
 }: {
@@ -34,6 +35,7 @@ export function UltimosGastos({
   onEliminar: (gasto: Gasto) => void;
   onEditar: (gasto: Gasto) => void;
   onAñadirManual?: () => void;
+  onImportarExportar?: () => void;
   hayMasGastos?: boolean;
   orden?: Orden;
 }) {
@@ -213,6 +215,24 @@ export function UltimosGastos({
             Cargar a mano
           </button>
         )}
+        {onImportarExportar && (
+          <button
+            type="button"
+            onClick={onImportarExportar}
+            className="mt-4 flex cursor-pointer items-center gap-1.5 rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium text-sub transition-colors hover:border-ink hover:text-ink"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="size-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Importar o exportar
+          </button>
+        )}
       </div>
     );
   }
@@ -224,24 +244,44 @@ export function UltimosGastos({
           <h2 className="font-display text-xl font-medium tracking-tight text-ink">
             Movimientos
           </h2>
-          {onAñadirManual && (
-            <button
-              type="button"
-              onClick={onAñadirManual}
-              className="flex cursor-pointer items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium text-sub transition-colors hover:border-ink hover:bg-surface-2 hover:text-ink"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className="size-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+          <div className="flex items-center gap-2">
+            {onImportarExportar && (
+              <button
+                type="button"
+                onClick={onImportarExportar}
+                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium text-sub transition-colors hover:border-ink hover:bg-surface-2 hover:text-ink"
               >
-                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-              </svg>
-              Cargar a mano
-            </button>
-          )}
+                <svg
+                  viewBox="0 0 24 24"
+                  className="size-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Importar / Exportar
+              </button>
+            )}
+            {onAñadirManual && (
+              <button
+                type="button"
+                onClick={onAñadirManual}
+                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium text-sub transition-colors hover:border-ink hover:bg-surface-2 hover:text-ink"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="size-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                </svg>
+                Cargar a mano
+              </button>
+            )}
+          </div>
         </div>
         <div className="space-y-4">
           {grupos.map(({ clave, lista }) => (

@@ -9,6 +9,7 @@ import { useGastos } from "@/hooks/useGastos";
 import {
   esCategoriaDeTipo,
   type Gasto,
+  type GastoInput,
   type GastoParseado,
   type Moneda,
 } from "@/lib/types";
@@ -19,6 +20,7 @@ import { VoiceButton } from "@/components/voice/VoiceButton";
 import { ExpenseConfirmSheet } from "@/components/voice/ExpenseConfirmSheet";
 import { Patrimonio } from "@/components/dashboard/Patrimonio";
 import { UltimosGastos } from "@/components/dashboard/UltimosGastos";
+import { ImportarExportarSheet } from "@/components/dashboard/ImportarExportarSheet";
 import { FiltrosYOrden, type Orden } from "@/components/dashboard/FiltrosYOrden";
 import { Logo } from "@/components/Logo";
 
@@ -202,6 +204,7 @@ export default function DashboardPage() {
     cargando: preferenciasCargando,
   } = usePreferencias();
   const [sheet, setSheet] = useState<Sheet | null>(null);
+  const [abrirArchivos, setAbrirArchivos] = useState(false);
   const [errorVoz, setErrorVoz] = useState<ErrorVoz | null>(null);
   const [procesando, setProcesando] = useState<Procesando>({
     activo: false,
@@ -449,6 +452,27 @@ export default function DashboardPage() {
     [gastosHook, mostrarAviso],
   );
 
+  const importarMovimientos = useCallback(
+    async (movimientos: GastoInput[]) => {
+      let importados = 0;
+      let fallidos = 0;
+      const TAMANO_LOTE = 10;
+      for (let i = 0; i < movimientos.length; i += TAMANO_LOTE) {
+        const lote = movimientos.slice(i, i + TAMANO_LOTE);
+        const resultados = await Promise.allSettled(lote.map((m) => gastosHook.crear(m)));
+        importados += resultados.filter((r) => r.status === "fulfilled").length;
+        fallidos += resultados.filter((r) => r.status === "rejected").length;
+      }
+      if (importados > 0) {
+        mostrarAviso(
+          `Se importaron ${importados} movimiento${importados !== 1 ? "s" : ""}`,
+        );
+      }
+      return { importados, fallidos };
+    },
+    [gastosHook, mostrarAviso],
+  );
+
   const eliminarGasto = useCallback(
     (gasto: Gasto) => {
       gastosHook.eliminar(gasto.id);
@@ -660,6 +684,7 @@ export default function DashboardPage() {
           onEliminar={eliminarGasto}
           onEditar={abrirEdicion}
           onAñadirManual={abrirManual}
+          onImportarExportar={() => setAbrirArchivos(true)}
         />
       </main>
 
@@ -670,6 +695,13 @@ export default function DashboardPage() {
         onConfirm={confirmarGasto}
         onCancel={() => setSheet(null)}
         onDone={() => setSheet(null)}
+      />
+
+      <ImportarExportarSheet
+        key={abrirArchivos ? "abierto" : "cerrado"}
+        abierto={abrirArchivos}
+        onCancel={() => setAbrirArchivos(false)}
+        onImportar={importarMovimientos}
       />
 
       {avisos.length > 0 && (
