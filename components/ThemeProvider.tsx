@@ -6,10 +6,10 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 import {
   TEMA_DEFECTO,
   validarTema,
@@ -20,6 +20,7 @@ import {
 
 const CLAVE_LOCAL = "dupla-tema";
 const CLAVE_LEGACY = "dupla-theme";
+const TEMA_AUTH = "dupla-clasico-light";
 
 type ThemeContextValue = {
   tema: string;
@@ -77,88 +78,76 @@ function cargarFuente(fuente: string | null) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const { usuario, perfil, actualizar } = useAuth();
+  const pathname = usePathname();
+  const esPaginaAuth = pathname === "/login" || pathname.startsWith("/login/");
+
   const [tema, setTemaState] = useState<string>(leerInicial);
-  const userIdRef = useRef<string | null>(null);
 
   const setTema = useCallback((temaValor: string) => {
-    const validado = validarTema(temaValor);
-    aplicarEnDocumento(validado);
-    try {
-      localStorage.setItem(CLAVE_LOCAL, validado);
-    } catch {
-      /* almacenamiento no disponible */
-    }
-    setTemaState(validado);
+    setTemaState(validarTema(temaValor));
   }, []);
 
-  // Sincronizar el documento con el tema activo (también en el primer render)
+  const temaEfectivo = esPaginaAuth ? TEMA_AUTH : tema;
+
+  // Servidor: si no hay tema local, adoptar el tema guardado en el perfil
+  const temaServidor = perfil?.tema;
   useEffect(() => {
-    aplicarEnDocumento(tema);
-    try {
-      localStorage.removeItem(CLAVE_LEGACY);
-    } catch {
-      /* almacenamiento no disponible */
+    if (esPaginaAuth || !temaServidor) return;
+    if (!leerLocal() && temaServidor !== tema) {
+      void Promise.resolve().then(() => setTema(temaServidor));
     }
-  }, [tema]);
+  }, [esPaginaAuth, temaServidor, tema, setTema]);
 
-  // Inicialización: tema guardado en Supabase (si localStorage está vacío)
+  // Aplicar el tema al documento y persistirlo localmente
   useEffect(() => {
-    let activo = true;
-    const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!activo || !data.user) return;
-      userIdRef.current = data.user.id;
-      let fila: { tema: string } | null = null;
+    aplicarEnDocumento(temaEfectivo);
+    if (!esPaginaAuth) {
       try {
-        const res = await supabase
-          .from("perfiles")
-          .select("tema")
-          .eq("user_id", data.user.id)
-          .maybeSingle();
-        fila = res.data;
+        localStorage.setItem(CLAVE_LOCAL, temaEfectivo);
+        localStorage.removeItem(CLAVE_LEGACY);
       } catch {
-        fila = null;
+        /* almacenamiento no disponible */
       }
-      if (!activo || !fila?.tema) return;
-      // localStorage vacío + tema guardado en el servidor → usar el del servidor
-      if (!leerLocal()) setTema(fila.tema);
-    });
+    }
+  }, [temaEfectivo, esPaginaAuth]);
 
-    return () => {
-      activo = false;
-    };
-  }, [setTema]);
-
-  // Sync a Supabase cuando cambia el tema
+  // Sync al servidor cuando cambia el tema (no en páginas de auth)
   useEffect(() => {
-    const userId = userIdRef.current;
-    if (!userId) return;
-    (async () => {
-      const { error } = await createClient()
-        .from("perfiles")
-        .upsert({ user_id: userId, tema, updated_at: new Date().toISOString() });
-      if (error) console.error("Error sincronizando tema", error);
-    })();
-  }, [tema]);
+    if (esPaginaAuth || !usuario) return;
+    if (tema === perfil?.tema) return;
+    actualizar({ tema }).catch(() => {
+      /* reintento en el próximo cambio */
+    });
+  }, [tema, esPaginaAuth, usuario, perfil?.tema, actualizar]);
 
   // Cargar la fuente del tema activo
   useEffect(() => {
-    const info = temaPorSlug(tema.split("-").slice(0, -1).join("-"));
+    const slug = temaEfectivo.split("-").slice(0, -1).join("-");
+    const info = temaPorSlug(slug);
     cargarFuente(info?.fuente ?? null);
-  }, [tema]);
+  }, [temaEfectivo]);
 
   const value = useMemo<ThemeContextValue>(() => {
-    const variante: VarianteTema = tema.endsWith("-dark") ? "dark" : "light";
-    const temaInfo = temaPorSlug(tema.split("-").slice(0, -1).join("-"));
+    const variante: VarianteTema = temaEfectivo.endsWith("-dark")
+      ? "dark"
+      : "light";
+    const temaInfo = temaPorSlug(temaEfectivo.split("-").slice(0, -1).join("-"));
     return {
-      tema,
+      tema: temaEfectivo,
       variante,
       temaInfo,
       setTema,
-      alternarVariante: () =>
-        setTema(`${tema.split("-").slice(0, -1).join("-")}-${variante === "dark" ? "light" : "dark"}`),
+      alternarVariante: () => {
+        if (esPaginaAuth) return;
+        setTema(
+          `${temaEfectivo.split("-").slice(0, -1).join("-")}-${
+            variante === "dark" ? "light" : "dark"
+          }`
+        );
+      },
     };
-  }, [tema, setTema]);
+  }, [temaEfectivo, setTema, esPaginaAuth]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

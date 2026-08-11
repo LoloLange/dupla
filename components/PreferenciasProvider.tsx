@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
 import {
   esMonedaSecundaria,
   type MonedaSecundaria,
@@ -33,70 +33,35 @@ export function PreferenciasProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const { perfil, cargando: cargandoAuth, actualizar } = useAuth();
   const [monedaSecundaria, setMonedaSecundariaState] = useState<
     MonedaSecundaria | null
   >(null);
   const [verDetalleMonedas, setVerDetalleMonedasState] = useState(true);
   const [verBalance, setVerBalanceState] = useState(true);
-  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    let activo = true;
-    const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!activo || !data.user) {
-        if (activo) setCargando(false);
-        return;
-      }
-      try {
-        const res = await supabase
-          .from("perfiles")
-          .select("moneda_secundaria, ver_detalle_monedas, ver_balance")
-          .eq("user_id", data.user.id)
-          .maybeSingle();
-        const valor = res.data?.moneda_secundaria ?? "USD";
-        if (activo) {
-          setMonedaSecundariaState(
-            esMonedaSecundaria(valor) ? valor : "USD"
-          );
-          setVerDetalleMonedasState(
-            res.data?.ver_detalle_monedas ?? true
-          );
-          setVerBalanceState(res.data?.ver_balance ?? true);
-        }
-      } catch {
-        if (activo) {
-          setMonedaSecundariaState("USD");
-          setVerDetalleMonedasState(true);
-          setVerBalanceState(true);
-        }
-      } finally {
-        if (activo) setCargando(false);
-      }
+    if (!perfil) return;
+    const valor = perfil.moneda_secundaria ?? "USD";
+    void Promise.resolve().then(() => {
+      setMonedaSecundariaState(esMonedaSecundaria(valor) ? valor : "USD");
+      setVerDetalleMonedasState(perfil.ver_detalle_monedas ?? true);
+      setVerBalanceState(perfil.ver_balance ?? true);
     });
+  }, [perfil]);
 
-    return () => {
-      activo = false;
-    };
-  }, []);
-
-  const persistir = useCallback((campos: Record<string, unknown>) => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) return;
-      supabase
-        .from("perfiles")
-        .upsert({
-          user_id: data.user.id,
-          ...campos,
-          updated_at: new Date().toISOString(),
-        })
-        .then(({ error }) => {
-          if (error)
-            console.error("Error guardando preferencias", error);
-        });
-    });
-  }, []);
+  const persistir = useCallback(
+    (campos: {
+      moneda_secundaria?: string | null;
+      ver_detalle_monedas?: boolean;
+      ver_balance?: boolean;
+    }) => {
+      actualizar(campos).catch(() => {
+        /* reintento en el próximo cambio */
+      });
+    },
+    [actualizar]
+  );
 
   const setMonedaSecundaria = useCallback(
     (moneda: MonedaSecundaria | null) => {
@@ -127,7 +92,7 @@ export function PreferenciasProvider({
       monedaSecundaria,
       verDetalleMonedas,
       verBalance,
-      cargando,
+      cargando: cargandoAuth,
       setMonedaSecundaria,
       setVerDetalleMonedas,
       setVerBalance,
@@ -136,7 +101,7 @@ export function PreferenciasProvider({
       monedaSecundaria,
       verDetalleMonedas,
       verBalance,
-      cargando,
+      cargandoAuth,
       setMonedaSecundaria,
       setVerDetalleMonedas,
       setVerBalance,

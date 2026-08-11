@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getUsuarioAutenticado } from "@/lib/supabase/server";
+import { getUsuarioAutenticado } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createAdminSupabase } from "@/lib/supabase/admin";
+import { getUsuarioAutenticado } from "@/lib/auth";
 import { z } from "zod";
 import {
   esCategoriaDeTipo,
@@ -98,12 +99,9 @@ function aGasto(fila: FilaGasto) {
 }
 
 export async function GET(request: NextRequest) {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const usuario = await getUsuarioAutenticado();
+  if (!usuario) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const supabase = createAdminSupabase();
 
   const exportar = request.nextUrl.searchParams.get("exportar") === "1";
 
@@ -125,12 +123,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const usuario = await getUsuarioAutenticado();
+  if (!usuario) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const supabase = createAdminSupabase();
 
   const body = (await request.json().catch(() => ({}))) as unknown;
   const parsed = gastoSchema.safeParse(body);
@@ -147,7 +142,7 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase
     .from("gastos")
     .insert({
-      user_id: user.id,
+      user_id: usuario.id,
       monto,
       moneda,
       tipo,
@@ -169,12 +164,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const usuario = await getUsuarioAutenticado();
+  if (!usuario) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const supabase = createAdminSupabase();
 
   const id = request.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Falta el id" }, { status: 400 });
@@ -198,7 +190,7 @@ export async function PATCH(request: NextRequest) {
     .from("gastos")
     .update(actualizacion)
     .eq("id", id)
-    .eq("user_id", user.id)
+    .eq("user_id", usuario.id)
     .select()
     .single();
 
@@ -211,12 +203,9 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const usuario = await getUsuarioAutenticado();
+  if (!usuario) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const supabase = createAdminSupabase();
 
   const id = request.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Falta el id" }, { status: 400 });
@@ -225,7 +214,7 @@ export async function DELETE(request: NextRequest) {
     .from("gastos")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", usuario.id);
 
   if (error) {
     console.error("Error eliminando gasto", error);

@@ -1,9 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { useGastos } from "@/hooks/useGastos";
 import {
@@ -16,12 +13,14 @@ import {
 import { inicioDeRango, type RangoFecha } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeProvider";
 import { usePreferencias } from "@/components/PreferenciasProvider";
+import { useAuth } from "@/components/AuthProvider";
 import { VoiceButton } from "@/components/voice/VoiceButton";
 import { ExpenseConfirmSheet } from "@/components/voice/ExpenseConfirmSheet";
 import { Patrimonio } from "@/components/dashboard/Patrimonio";
 import { UltimosGastos } from "@/components/dashboard/UltimosGastos";
 import { ImportarExportarSheet } from "@/components/dashboard/ImportarExportarSheet";
 import { FiltrosYOrden, type Orden } from "@/components/dashboard/FiltrosYOrden";
+import { MenuPerfil } from "@/components/dashboard/MenuPerfil";
 import { Logo } from "@/components/Logo";
 
 type Procesando = { activo: boolean; mensaje: string };
@@ -194,9 +193,15 @@ function ToastItem({
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
   const grabadora = useVoiceRecorder();
   const gastosHook = useGastos();
+  const { usuario } = useAuth();
+  const nombre = usuario
+    ? (usuario.nombre?.trim() || usuario.email.split("@")[0] || "").replace(
+        /^./,
+        (c) => c.toUpperCase()
+      )
+    : null;
   const {
     monedaSecundaria,
     verDetalleMonedas,
@@ -211,7 +216,6 @@ export default function DashboardPage() {
     mensaje: "",
   });
   const [avisos, setAvisos] = useState<Aviso[]>([]);
-  const [nombre, setNombre] = useState<string | null>(null);
   const [rango, setRango] = useState<RangoFecha>("mes");
   const [categorias, setCategorias] = useState<string[]>([]);
   const [monedas, setMonedas] = useState<Moneda[]>([]);
@@ -256,30 +260,6 @@ export default function DashboardPage() {
     },
     [quitarAviso],
   );
-
-  useEffect(() => {
-    let activo = true;
-    createClient()
-      .auth.getUser()
-      .then(({ data }) => {
-        if (!activo || !data.user) return;
-        const meta = data.user.user_metadata as
-          | Record<string, string>
-          | undefined;
-        const nombre =
-          meta?.full_name ??
-          meta?.nombre ??
-          data.user.email?.split("@")[0] ??
-          null;
-        setNombre(
-          nombre ? nombre.charAt(0).toUpperCase() + nombre.slice(1) : null,
-        );
-      })
-      .catch(() => {});
-    return () => {
-      activo = false;
-    };
-  }, []);
 
   const procesarAudio = useCallback(
     async (blob: Blob) => {
@@ -514,11 +494,6 @@ export default function DashboardPage() {
     [gastosHook, mostrarAviso],
   );
 
-  const cerrarSesion = useCallback(async () => {
-    await createClient().auth.signOut();
-    router.push("/login");
-  }, [router]);
-
   const saludo = useCallback(() => {
     const h = new Date().getHours();
     if (h < 12) return "Buenos días";
@@ -535,53 +510,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-2.5">
             <ThemeToggle />
-            <Link
-              href="/ajustes"
-              aria-label="Ajustes"
-              className="grid size-10 place-items-center rounded-full border border-line bg-surface text-sub shadow-sm transition-all hover:-translate-y-0.5 hover:text-ink active:scale-95"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className="size-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19.5 12a7.5 7.5 0 0 0-.12-1.35l1.9-1.48-1.8-3.12-2.23.9a7.5 7.5 0 0 0-2.34-1.35L14.4 3.6h-4.8l-.51 2.15a7.5 7.5 0 0 0-2.34 1.35l-2.23-.9-1.8 3.12 1.9 1.48A7.5 7.5 0 0 0 4.5 12c0 .46.04.9.12 1.35l-1.9 1.48 1.8 3.12 2.23-.9c.68.57 1.47 1.02 2.34 1.35l.51 2.15h4.8l.51-2.15a7.5 7.5 0 0 0 2.34-1.35l2.23.9 1.8-3.12-1.9-1.48c.08-.45.12-.89.12-1.35Z"
-                />
-              </svg>
-            </Link>
-            <button
-              type="button"
-              onClick={cerrarSesion}
-              aria-label="Cerrar sesión"
-              className="grid size-10 cursor-pointer place-items-center rounded-full border border-line bg-surface text-sub shadow-sm transition-all hover:-translate-y-0.5 hover:text-danger active:scale-95"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className="size-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6A2.25 2.25 0 0 0 5.25 5.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
-                />
-              </svg>
-            </button>
-            <div className="grid size-10 place-items-center rounded-full border border-line bg-surface font-display text-base font-semibold text-ars">
-              {(nombre ?? "D").charAt(0).toUpperCase()}
-            </div>
+            <MenuPerfil />
           </div>
         </div>
       </header>
@@ -689,7 +618,6 @@ export default function DashboardPage() {
       </main>
 
       <ExpenseConfirmSheet
-        key={sheet?.clave ?? "cerrado"}
         abierto={!!sheet}
         gasto={sheet?.gasto ?? null}
         onConfirm={confirmarGasto}
@@ -698,7 +626,6 @@ export default function DashboardPage() {
       />
 
       <ImportarExportarSheet
-        key={abrirArchivos ? "abierto" : "cerrado"}
         abierto={abrirArchivos}
         onCancel={() => setAbrirArchivos(false)}
         onImportar={importarMovimientos}

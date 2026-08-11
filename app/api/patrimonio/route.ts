@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createAdminSupabase } from "@/lib/supabase/admin";
+import { getUsuarioAutenticado } from "@/lib/auth";
 import { z } from "zod";
 
 const MONEDAS = ["ARS", "USD"] as const;
 
 export async function GET() {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const usuario = await getUsuarioAutenticado();
+  if (!usuario) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const supabase = createAdminSupabase();
 
   const { data, error } = await supabase
     .from("patrimonio")
     .select("*")
-    .eq("user_id", user.id);
+    .eq("user_id", usuario.id);
 
   if (error) {
     console.error("Error leyendo patrimonio", error);
@@ -31,12 +29,9 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const usuario = await getUsuarioAutenticado();
+  if (!usuario) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const supabase = createAdminSupabase();
 
   const moneda = request.nextUrl.searchParams.get("moneda");
   const body = (await request.json().catch(() => ({}))) as unknown;
@@ -51,7 +46,7 @@ export async function PATCH(request: NextRequest) {
   const { data, error } = await supabase
     .from("patrimonio")
     .upsert(
-      { user_id: user.id, moneda, saldo: parsed.data.saldo, updated_at: new Date().toISOString() },
+      { user_id: usuario.id, moneda, saldo: parsed.data.saldo, updated_at: new Date().toISOString() },
       { onConflict: "user_id,moneda" }
     )
     .select()
