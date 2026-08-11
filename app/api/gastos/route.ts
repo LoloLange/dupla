@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { z } from "zod";
-import { CATEGORIAS } from "@/lib/types";
+import {
+  esCategoriaDeTipo,
+  esCategoriaGasto,
+  esCategoriaIngreso,
+} from "@/lib/types";
 import {
   filaDesdeRecurrencia,
   recurrenciaDesdeFila,
@@ -23,17 +27,40 @@ const recurrenciaSchema = z.discriminatedUnion("frecuencia", [
   }),
 ]);
 
-const gastoSchema = z.object({
+const gastoSchemaBase = z.object({
   monto: z.number().positive(),
   moneda: z.enum(MONEDAS),
-  tipo: z.enum(TIPOS).default("gasto"),
-  categoria: z.enum(CATEGORIAS),
+  tipo: z.enum(TIPOS),
+  categoria: z.string().min(1).max(40),
   descripcion: z.string().max(200).default(""),
   fecha: z.string().datetime().optional(),
   recurrencia: recurrenciaSchema.nullable().optional(),
   tags: z.array(z.string().trim().min(1).max(30)).max(20).optional(),
   comentario: z.string().trim().max(500).optional(),
 });
+
+function validarCategoria(
+  val: { tipo?: "gasto" | "ingreso"; categoria?: string },
+  ctx: z.RefinementCtx
+) {
+  if (val.categoria === undefined) return;
+  const valida =
+    val.tipo === undefined
+      ? esCategoriaGasto(val.categoria) || esCategoriaIngreso(val.categoria)
+      : esCategoriaDeTipo(val.tipo, val.categoria);
+  if (!valida) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["categoria"],
+      message: "La categoría no corresponde al tipo de movimiento",
+    });
+  }
+}
+
+const gastoSchema = gastoSchemaBase
+  .extend({ tipo: z.enum(TIPOS).default("gasto") })
+  .superRefine(validarCategoria);
+const gastoPatchSchema = gastoSchemaBase.partial().superRefine(validarCategoria);
 
 type FilaGasto = {
   id: string;
@@ -148,7 +175,7 @@ export async function PATCH(request: NextRequest) {
   if (!id) return NextResponse.json({ error: "Falta el id" }, { status: 400 });
 
   const body = (await request.json().catch(() => ({}))) as unknown;
-  const parsed = gastoSchema.partial().safeParse(body);
+  const parsed = gastoPatchSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
   }

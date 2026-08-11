@@ -54,7 +54,7 @@ export type GastoParseado = Omit<GastoInput, "monto"> & {
   monto: number | null;
 };
 
-export const CATEGORIAS = [
+export const CATEGORIAS_GASTO = [
   "Supermercado",
   "Comida y bares",
   "Transporte",
@@ -67,11 +67,45 @@ export const CATEGORIAS = [
   "Otros",
 ] as const;
 
-export type Categoria = (typeof CATEGORIAS)[number];
+export type CategoriaGasto = (typeof CATEGORIAS_GASTO)[number];
 
-export function esCategoria(valor: string): valor is Categoria {
-  return (CATEGORIAS as readonly string[]).includes(valor);
+export const CATEGORIAS_INGRESO = [
+  "Sueldo",
+  "Freelance",
+  "Ventas",
+  "Inversiones",
+  "Regalos",
+  "Reintegros",
+  "Beca",
+  "Otros",
+] as const;
+
+export type CategoriaIngreso = (typeof CATEGORIAS_INGRESO)[number];
+
+export function esCategoriaGasto(valor: string): valor is CategoriaGasto {
+  return (CATEGORIAS_GASTO as readonly string[]).includes(valor);
 }
+
+export function esCategoriaIngreso(valor: string): valor is CategoriaIngreso {
+  return (CATEGORIAS_INGRESO as readonly string[]).includes(valor);
+}
+
+export function esCategoriaDeTipo(tipo: Tipo, valor: string): boolean {
+  return tipo === "ingreso"
+    ? esCategoriaIngreso(valor)
+    : esCategoriaGasto(valor);
+}
+
+export function categoriasDeTipo(tipo: Tipo): readonly string[] {
+  return tipo === "ingreso" ? CATEGORIAS_INGRESO : CATEGORIAS_GASTO;
+}
+
+export const CATEGORIAS_TODAS: readonly string[] = [
+  ...CATEGORIAS_GASTO,
+  ...CATEGORIAS_INGRESO.filter(
+    (c) => !(CATEGORIAS_GASTO as readonly string[]).includes(c)
+  ),
+];
 
 export const MONEDAS_SECUNDARIAS: {
   codigo: MonedaSecundaria;

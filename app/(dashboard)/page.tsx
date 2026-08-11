@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { useGastos } from "@/hooks/useGastos";
 import {
-  esCategoria,
+  esCategoriaDeTipo,
   type Gasto,
   type GastoParseado,
   type Moneda,
@@ -195,7 +195,12 @@ export default function DashboardPage() {
   const router = useRouter();
   const grabadora = useVoiceRecorder();
   const gastosHook = useGastos();
-  const { monedaSecundaria } = usePreferencias();
+  const {
+    monedaSecundaria,
+    verDetalleMonedas,
+    verBalance,
+    cargando: preferenciasCargando,
+  } = usePreferencias();
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [errorVoz, setErrorVoz] = useState<ErrorVoz | null>(null);
   const [procesando, setProcesando] = useState<Procesando>({
@@ -458,7 +463,7 @@ export default function DashboardPage() {
                 monto: gasto.monto,
                 moneda: gasto.moneda,
                 tipo: gasto.tipo,
-                categoria: esCategoria(gasto.categoria)
+                categoria: esCategoriaDeTipo(gasto.tipo, gasto.categoria)
                   ? gasto.categoria
                   : "Otros",
                 descripcion: gasto.descripcion ?? "",
@@ -616,6 +621,9 @@ export default function DashboardPage() {
               cargando={gastosHook.cargando}
               rango={rango}
               monedaSecundaria={monedaSecundaria}
+              verDetalleMonedas={verDetalleMonedas}
+              verBalance={verBalance}
+              preferenciasCargando={preferenciasCargando}
             />
           </div>
         </div>

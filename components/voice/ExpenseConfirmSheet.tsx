@@ -8,7 +8,7 @@ import type {
   RecurrenciaFrecuencia,
   Tipo,
 } from "@/lib/types";
-import { CATEGORIAS, esCategoria, MONEDAS } from "@/lib/types";
+import { esCategoriaDeTipo, categoriasDeTipo, MONEDAS } from "@/lib/types";
 import { cn, formatMonto } from "@/lib/utils";
 import { Checkmark } from "@/components/voice/Checkmark";
 import { NOMBRES_DIAS_SEMANA } from "@/lib/recurrencia";
@@ -163,7 +163,9 @@ export function ExpenseConfirmSheet({
   const [moneda, setMoneda] = useState<Moneda>(() => gasto?.moneda ?? "ARS");
   const [tipo, setTipo] = useState<Tipo>(() => gasto?.tipo ?? "gasto");
   const [categoria, setCategoria] = useState(() =>
-    gasto && esCategoria(gasto.categoria) ? gasto.categoria : "Otros"
+    gasto && esCategoriaDeTipo(gasto.tipo, gasto.categoria)
+      ? gasto.categoria
+      : "Otros"
   );
   const [descripcion, setDescripcion] = useState(() => gasto?.descripcion ?? "");
   const [tags, setTags] = useState<string[]>(() => gasto?.tags ?? []);
@@ -216,7 +218,7 @@ export function ExpenseConfirmSheet({
     if (String(gasto.monto ?? "") !== monto) return true;
     if ((gasto.moneda ?? "ARS") !== moneda) return true;
     if ((gasto.tipo ?? "gasto") !== tipo) return true;
-    const origCategoria = esCategoria(gasto.categoria)
+    const origCategoria = esCategoriaDeTipo(gasto.tipo, gasto.categoria)
       ? gasto.categoria
       : "Otros";
     if (origCategoria !== categoria) return true;
@@ -496,7 +498,12 @@ export function ExpenseConfirmSheet({
                   <button
                     key={t}
                     type="button"
-                    onClick={() => setTipo(t)}
+                    onClick={() => {
+                      setTipo(t);
+                      setCategoria((c) =>
+                        esCategoriaDeTipo(t, c) ? c : "Otros"
+                      );
+                    }}
                     className={cn(
                       "flex-1 cursor-pointer rounded-xl px-4 py-2 text-sm font-semibold transition-all",
                       tipo === t
@@ -557,7 +564,7 @@ export function ExpenseConfirmSheet({
                   Categoría
                 </span>
                 <div className="flex gap-2 overflow-x-auto pb-1">
-                  {CATEGORIAS.map((c) => (
+                  {categoriasDeTipo(tipo).map((c) => (
                     <button
                       key={c}
                       type="button"

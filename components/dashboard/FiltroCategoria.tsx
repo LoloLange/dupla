@@ -1,6 +1,6 @@
 "use client";
 
-import { CATEGORIAS } from "@/lib/types";
+import { CATEGORIAS_TODAS } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function FiltroCategoria({
@@ -24,7 +24,7 @@ export function FiltroCategoria({
       aria-label="Filtrar por categoría"
       className="flex w-full items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar sm:w-auto"
     >
-      {CATEGORIAS.map((categoria) => {
+      {CATEGORIAS_TODAS.map((categoria) => {
         const activa = seleccionadas.includes(categoria);
         return (
           <button

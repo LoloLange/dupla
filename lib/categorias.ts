@@ -42,6 +42,13 @@ const EMOJI_POR_CATEGORIA: Record<string, string> = {
   Suscripciones: emojiDe("streaming"),
   Educación: emojiDe("educacion"),
   Otros: "✨",
+  Sueldo: "💼",
+  Freelance: "🧑‍💻",
+  Ventas: "🛒",
+  Inversiones: "📈",
+  Regalos: "🎁",
+  Reintegros: "↩️",
+  Beca: "🎓",
 };
 
 export function emojiDeMovimiento(

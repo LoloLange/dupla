@@ -1,6 +1,11 @@
 import { groqChatJson } from "@/lib/groq/client";
 import type { GastoParseado } from "@/lib/types";
-import { esCategoria, esMoneda } from "@/lib/types";
+import {
+  esCategoriaGasto,
+  esCategoriaIngreso,
+  categoriasDeTipo,
+  esMoneda,
+} from "@/lib/types";
 
 export const MODELO_PARSE = "llama-3.3-70b-versatile";
 
@@ -34,7 +39,7 @@ Reglas:
 - Podés reconocer otras monedas si la frase las nombra: "euros", "euro" -> EUR; "reales", "real" (moneda de Brasil) -> BRL; "pesos chilenos", "lucas chilenas", "CLP" -> CLP; "pesos uruguayos", "UYU" -> UYU.
 - NUNCA conviertas entre monedas: cada movimiento se anota en su moneda original, con su monto original y sin aclaraciones entre paréntesis. Ej: "gasté 50 euros en Roma" -> {"monto": 50, "moneda": "EUR", "descripcion": "Café en Roma"}.
 - "mil" = 1000, "lucas" = mil, "palos" = millón. "8 mil" = 8000, "dos mil quinientos" = 2500, "15 dolares" = 15 USD.
-- Elegí la categoría más cercana de esta lista fija: Supermercado, Comida y bares, Transporte, Vivienda, Servicios, Salud, Entretenimiento, Suscripciones, Educación, Otros.
+- Elegí la categoría según el "tipo". Para GASTOS usá esta lista fija: Supermercado, Comida y bares, Transporte, Vivienda, Servicios, Salud, Entretenimiento, Suscripciones, Educación, Otros.
   - Supermercado: supermercado, chino, almacén, kiosco, verdulería, fiambrería, carnicería, coto, carrefour, jumbo.
   - Comida y bares: restaurante, delivery, cafetería, bar, hamburguesas, pizza, helado, pedidos ya, rappi.
   - Suscripciones: netflix, spotify, disney, prime, youtube, max, hbo, stream, streaming, iCloud, google one.
@@ -44,6 +49,15 @@ Reglas:
   - Transporte: taxi, uber, cabify, didi, bondi, colectivo, subte, tren, remís, nafta, combustible, estacionamiento.
   - Educación: curso, libro, facultad, colegio, idioma, suscripción educativa.
   - Vivienda: alquiler, seguro, muebles, hogar, arreglos, bazar.
+  Para INGRESOS usá esta lista fija: Sueldo, Freelance, Ventas, Inversiones, Regalos, Reintegros, Beca, Otros.
+  - Sueldo: sueldo, salario, aguinaldo, quincena, cobro del mes, remuneración, recibo de sueldo.
+  - Freelance: freelance, trabajo freelance, clientes, proyecto, trabajitos, changa.
+  - Ventas: vendí, venta, vendimos, marketplace, mercado libre, usados, garage sale, feria americana.
+  - Inversiones: inversión, plazo fijo, dividendos, intereses, acciones, cripto, ganancia, rendimiento.
+  - Regalos: regalo, regalaron, cumple, obsequio, agasajo.
+  - Reintegros: reintegro, reembolso, devolución, cashback, reintegran.
+  - Beca: beca, beca estudiantil, ayudantía.
+  Si la categoría no encaja, usá "Otros".
 - "descripcion": texto corto y natural para mostrar, ej "Supermercado Coto" o "Netflix". Sin signos raros.
 - "fecha": es la hora LOCAL del usuario y SIEMPRE sin zona horaria (ej: "2026-08-07T21:00:00"). NUNCA uses "Z" ni "+00:00" ni "-03:00". La hora local actual te la paso abajo. Si la frase dice "hoy", "recién", "ahora" o no da fecha, usá la fecha local actual. Si dice "ayer", restá un día. Si dice "el lunes"/"el martes", calculá el día de la semana correspondiente al día actual de la semana. Si la frase dice una hora ("a las 9 de la noche", "a la mañana", "al mediodía"), reflejá esa hora tal cual en el campo "fecha" (21:00, 09:00, 12:00 respectivamente).
 - "fecha_hint": copiá TEXTUALMENTE la parte de la frase que indica la fecha y hora de ESTE movimiento en particular. Si hay varios movimientos, cada uno lleva SOLO el fragmento que le corresponde a él (ej: para "el 3 de agosto gasté 30 mil y ayer gasté 10 dólares" el primero lleva "el 3 de agosto" y el segundo "ayer"). Si ese movimiento no tiene fecha, poné "".
@@ -133,8 +147,12 @@ function normalizarUno(
   const moneda = esMoneda(monedaRaw) ? monedaRaw : "ARS";
 
   let categoria = typeof r.categoria === "string" ? r.categoria.trim() : "Otros";
-  if (!esCategoria(categoria)) {
-    const coincidencia = CATEGORIAS_POSIBLES.find((c) =>
+  const esValida =
+    tipo === "ingreso"
+      ? esCategoriaIngreso(categoria)
+      : esCategoriaGasto(categoria);
+  if (!esValida) {
+    const coincidencia = categoriasDeTipo(tipo).find((c) =>
       categoria.toLowerCase().includes(c.toLowerCase())
     );
     categoria = coincidencia ?? "Otros";
@@ -153,19 +171,6 @@ function normalizarUno(
 
   return { tipo, monto, moneda, categoria, descripcion, fecha };
 }
-
-const CATEGORIAS_POSIBLES = [
-  "Supermercado",
-  "Comida y bares",
-  "Transporte",
-  "Vivienda",
-  "Servicios",
-  "Salud",
-  "Entretenimiento",
-  "Suscripciones",
-  "Educación",
-  "Otros",
-];
 
 function parsearMonto(valor: unknown): number | null {
   if (typeof valor === "number") {
