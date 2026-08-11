@@ -1,7 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Gasto } from "@/lib/types";
+import type { Gasto, Recurrencia } from "@/lib/types";
+
+export type DatosMovimiento = {
+  monto: number;
+  moneda: "ARS" | "USD";
+  tipo: "gasto" | "ingreso";
+  categoria: string;
+  descripcion: string;
+  fecha: string;
+  recurrencia?: Recurrencia | null;
+};
 
 export function useGastos() {
   const [gastos, setGastos] = useState<Gasto[]>([]);
@@ -37,14 +47,7 @@ export function useGastos() {
   );
 
   const crear = useCallback(
-    async (datos: {
-      monto: number;
-      moneda: "ARS" | "USD";
-      tipo: "gasto" | "ingreso";
-      categoria: string;
-      descripcion: string;
-      fecha: string;
-    }): Promise<Gasto> => {
+    async (datos: DatosMovimiento): Promise<Gasto> => {
       const res = await fetch("/api/gastos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -67,17 +70,7 @@ export function useGastos() {
   );
 
   const actualizar = useCallback(
-    async (
-      id: string,
-      datos: {
-        monto: number;
-        moneda: "ARS" | "USD";
-        tipo: "gasto" | "ingreso";
-        categoria: string;
-        descripcion: string;
-        fecha: string;
-      }
-    ): Promise<Gasto> => {
+    async (id: string, datos: DatosMovimiento): Promise<Gasto> => {
       const res = await fetch(`/api/gastos?id=${encodeURIComponent(id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

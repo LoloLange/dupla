@@ -2,9 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { z } from "zod";
 import { CATEGORIAS } from "@/lib/types";
+import {
+  filaDesdeRecurrencia,
+  recurrenciaDesdeFila,
+} from "@/lib/recurrencia";
 
 const MONEDAS = ["ARS", "USD"] as const;
 const TIPOS = ["gasto", "ingreso"] as const;
+
+const recurrenciaSchema = z.discriminatedUnion("frecuencia", [
+  z.object({
+    frecuencia: z.literal("semanal"),
+    intervalo: z.number().int().min(1).max(52),
+    diaSemana: z.number().int().min(0).max(6),
+  }),
+  z.object({
+    frecuencia: z.literal("mensual"),
+    intervalo: z.number().int().min(1).max(12),
+    diaMes: z.number().int().min(1).max(31),
+  }),
+]);
 
 const gastoSchema = z.object({
   monto: z.number().positive(),
@@ -13,7 +30,39 @@ const gastoSchema = z.object({
   categoria: z.enum(CATEGORIAS),
   descripcion: z.string().max(200).default(""),
   fecha: z.string().datetime().optional(),
+  recurrencia: recurrenciaSchema.nullable().optional(),
 });
+
+type FilaGasto = {
+  id: string;
+  user_id: string;
+  monto: number;
+  moneda: string;
+  tipo: string;
+  categoria: string;
+  descripcion: string | null;
+  fecha: string;
+  created_at: string;
+  recurrencia_frecuencia: string | null;
+  recurrencia_intervalo: number | null;
+  recurrencia_dia_semana: number | null;
+  recurrencia_dia_mes: number | null;
+};
+
+function aGasto(fila: FilaGasto) {
+  return {
+    id: fila.id,
+    user_id: fila.user_id,
+    monto: Number(fila.monto),
+    moneda: fila.moneda,
+    tipo: fila.tipo,
+    categoria: fila.categoria,
+    descripcion: fila.descripcion,
+    fecha: fila.fecha,
+    created_at: fila.created_at,
+    recurrencia: recurrenciaDesdeFila(fila),
+  };
+}
 
 export async function GET() {
   const supabase = await createServerSupabase();
@@ -34,7 +83,7 @@ export async function GET() {
     return NextResponse.json({ error: "Error al leer los gastos" }, { status: 500 });
   }
 
-  return NextResponse.json({ gastos: data });
+  return NextResponse.json({ gastos: (data ?? []).map((f) => aGasto(f as FilaGasto)) });
 }
 
 export async function POST(request: NextRequest) {
@@ -75,7 +124,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No se pudo guardar el gasto" }, { status: 500 });
   }
 
-  return NextResponse.json({ gasto: data }, { status: 201 });
+  return NextResponse.json({ gasto: aGasto(data as FilaGasto) }, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -95,9 +144,15 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
+  const { recurrencia, ...resto } = parsed.data;
+  const actualizacion: Record<string, unknown> = { ...resto };
+  if (recurrencia !== undefined) {
+    Object.assign(actualizacion, filaDesdeRecurrencia(recurrencia));
+  }
+
   const { data, error } = await supabase
     .from("gastos")
-    .update(parsed.data)
+    .update(actualizacion)
     .eq("id", id)
     .eq("user_id", user.id)
     .select()
@@ -108,7 +163,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "No se pudo actualizar el gasto" }, { status: 500 });
   }
 
-  return NextResponse.json({ gasto: data });
+  return NextResponse.json({ gasto: aGasto(data as FilaGasto) });
 }
 
 export async function DELETE(request: NextRequest) {

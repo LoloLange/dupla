@@ -78,7 +78,7 @@ export default function AjustesPage() {
               <Link href="/" className="transition-colors hover:text-ink">
                 dupla
               </Link>{" "}
-              · ajustes
+              | ajustes
             </p>
             <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ink lg:text-5xl">
               Apariencia

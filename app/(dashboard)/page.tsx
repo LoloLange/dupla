@@ -340,7 +340,7 @@ export default function DashboardPage() {
           try {
             const guardado = await gastosHook.crear({ ...g, monto: g.monto });
             mostrarAviso(
-              `${g.tipo === "ingreso" ? "Ingreso" : "Gasto"} guardado · ${g.descripcion}`,
+              `${g.tipo === "ingreso" ? "Ingreso" : "Gasto"} guardado | ${g.descripcion}`,
               guardado.id,
             );
           } catch {
@@ -397,6 +397,7 @@ export default function DashboardPage() {
           categoria: gasto.categoria,
           descripcion: gasto.descripcion ?? "",
           fecha: aIsoValida(gasto.fecha),
+          recurrencia: gasto.recurrencia,
         },
         clave: `editar-${gasto.id}`,
       });
@@ -458,6 +459,7 @@ export default function DashboardPage() {
                   : "Otros",
                 descripcion: gasto.descripcion ?? "",
                 fecha: aIsoValida(gasto.fecha),
+                recurrencia: gasto.recurrencia ?? undefined,
               })
               .then((restaurado) => {
                 mostrarAviso(

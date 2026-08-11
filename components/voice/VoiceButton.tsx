@@ -108,7 +108,7 @@ export function VoiceButton({
       <div className="flex h-10 flex-col items-center justify-center text-center">
         {grabando ? (
           <p className="font-display text-base tracking-tight text-ink">
-            Soltá para terminar ·{" "}
+            Soltá para terminar |{" "}
             <span className="font-mono text-sm tabular-nums text-ars">
               {String(Math.floor(duracion / 60)).padStart(1, "0")}:
               {String(duracion % 60).padStart(2, "0")}
