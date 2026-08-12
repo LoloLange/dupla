@@ -27,6 +27,9 @@ export function UltimosGastos({
   onEditar,
   onAñadirManual,
   onImportarExportar,
+  onCargarMas,
+  cargandoMas = false,
+  tieneMas = false,
   hayMasGastos = false,
   orden = "desc",
 }: {
@@ -36,6 +39,9 @@ export function UltimosGastos({
   onEditar: (gasto: Gasto) => void;
   onAñadirManual?: () => void;
   onImportarExportar?: () => void;
+  onCargarMas?: () => void;
+  cargandoMas?: boolean;
+  tieneMas?: boolean;
   hayMasGastos?: boolean;
   orden?: Orden;
 }) {
@@ -430,6 +436,29 @@ export function UltimosGastos({
           ))}
         </div>
       </section>
+
+      {onCargarMas && tieneMas && (
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={onCargarMas}
+            disabled={cargandoMas}
+            className="flex cursor-pointer items-center gap-2 rounded-full border border-line bg-surface px-5 py-2.5 text-sm font-medium text-sub transition-colors hover:border-ink hover:bg-surface-2 hover:text-ink disabled:cursor-default disabled:opacity-60"
+          >
+            {cargandoMas ? (
+              <>
+                <span
+                  className="size-3.5 animate-spin rounded-full border-2 border-line border-t-ink"
+                  aria-hidden
+                />
+                Cargando…
+              </>
+            ) : (
+              "Cargar más movimientos"
+            )}
+          </button>
+        </div>
+      )}
 
       {confirmarBorrado && (
         <div

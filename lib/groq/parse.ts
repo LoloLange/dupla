@@ -100,7 +100,7 @@ export async function parsearTextoATexto(
   return normalizarMovimientos(resultado, texto, ahoraLocal, offsetMinutos);
 }
 
-function normalizarMovimientos(
+export function normalizarMovimientos(
   bruto: unknown,
   texto: string,
   ahoraLocal: string,
@@ -172,7 +172,7 @@ function normalizarUno(
   return { tipo, monto, moneda, categoria, descripcion, fecha };
 }
 
-function parsearMonto(valor: unknown): number | null {
+export function parsearMonto(valor: unknown): number | null {
   if (typeof valor === "number") {
     return Number.isFinite(valor) && valor > 0 ? valor : null;
   }
@@ -180,24 +180,36 @@ function parsearMonto(valor: unknown): number | null {
 
   const coincidencia = valor.match(/\d[\d.,]*/);
   if (!coincidencia) return null;
-  let num = coincidencia[0];
+  let token = coincidencia[0];
 
-  if (num.includes(",")) {
-    const [, decimales] = num.split(",");
-    if (decimales.length === 2) {
-      num = num.replace(",", ".");
+  const hayComa = token.includes(",");
+  const hayPunto = token.includes(".");
+
+  if (hayComa && hayPunto) {
+    const posComa = token.lastIndexOf(",");
+    const posPunto = token.lastIndexOf(".");
+    const separadorDecimal = posComa > posPunto ? "," : ".";
+    const [entera, decimal] = token.split(separadorDecimal);
+    const n = Number(`${entera.replace(/[.,]/g, "")}.${decimal.replace(/[.,]/g, "")}`);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  if (hayComa) {
+    const [, decimal] = token.split(",");
+    if (decimal.length === 1 || decimal.length === 2) {
+      token = token.replace(",", ".");
     } else {
-      num = num.replace(/,/g, "");
+      token = token.replace(/,/g, "");
     }
-  }
-  if (num.includes(".")) {
-    const [entera, decimales] = num.split(".");
-    if (decimales && decimales.length === 3 && entera.length >= 3) {
-      num = num.replace(/\./g, "");
+  } else if (hayPunto) {
+    const [, decimal] = token.split(".");
+    const esMiles = decimal !== undefined && decimal.length === 3;
+    if (esMiles || token.split(".").length > 2) {
+      token = token.replace(/\./g, "");
     }
   }
 
-  const n = Number(num);
+  const n = Number(token);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
@@ -309,7 +321,7 @@ function diaReferencia(texto: string, ahoraLocal: string): string | null {
   return null;
 }
 
-function resolverFecha(
+export function resolverFecha(
   texto: string,
   fechaLlm: unknown,
   ahoraLocal: string,

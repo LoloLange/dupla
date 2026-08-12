@@ -609,6 +609,9 @@ export default function DashboardPage() {
           gastos={gastosFiltrados}
           hayMasGastos={gastosHook.gastos.length > gastosFiltrados.length}
           cargando={gastosHook.cargando}
+          cargandoMas={gastosHook.cargandoMas}
+          tieneMas={gastosHook.tieneMas}
+          onCargarMas={gastosHook.cargarMas}
           orden={orden}
           onEliminar={eliminarGasto}
           onEditar={abrirEdicion}

@@ -98,6 +98,20 @@ function aGasto(fila: FilaGasto) {
   };
 }
 
+const LIMITE_POR_DEFECTO = 100;
+const LIMITE_MAXIMO = 200;
+
+function enteroParametro(
+  valor: string | null,
+  defecto: number,
+  maximo: number
+): number {
+  if (!valor) return defecto;
+  const n = Number(valor);
+  if (!Number.isInteger(n) || n < 0) return defecto;
+  return Math.min(n, maximo);
+}
+
 export async function GET(request: NextRequest) {
   const usuario = await getUsuarioAutenticado();
   if (!usuario) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -105,21 +119,36 @@ export async function GET(request: NextRequest) {
 
   const exportar = request.nextUrl.searchParams.get("exportar") === "1";
 
-  let query = supabase.from("gastos").select("*");
+  let query = supabase.from("gastos").select("*", { count: "exact" });
   if (exportar) {
     query = query.order("fecha", { ascending: true });
   } else {
-    query = query.order("fecha", { ascending: false }).limit(100);
+    const limite = enteroParametro(
+      request.nextUrl.searchParams.get("limite"),
+      LIMITE_POR_DEFECTO,
+      LIMITE_MAXIMO
+    );
+    const offset = enteroParametro(
+      request.nextUrl.searchParams.get("offset"),
+      0,
+      100_000
+    );
+    query = query
+      .order("fecha", { ascending: false })
+      .range(offset, offset + limite - 1);
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
 
   if (error) {
     console.error("Error listando gastos", error);
     return NextResponse.json({ error: "Error al leer los gastos" }, { status: 500 });
   }
 
-  return NextResponse.json({ gastos: (data ?? []).map((f) => aGasto(f as FilaGasto)) });
+  return NextResponse.json({
+    gastos: (data ?? []).map((f) => aGasto(f as FilaGasto)),
+    total: count ?? (data ?? []).length,
+  });
 }
 
 export async function POST(request: NextRequest) {

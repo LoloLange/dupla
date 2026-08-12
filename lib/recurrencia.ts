@@ -15,14 +15,18 @@ export function etiquetaRecurrencia(
 ): string | null {
   if (!r) return null;
   if (r.frecuencia === "semanal") {
-    const nombre = NOMBRES_DIAS_SEMANA[r.diaSemana] ?? "ese día";
+    const nombre = NOMBRES_DIAS_SEMANA[r.diaSemana];
+    const dias =
+      nombre === undefined
+        ? "ese día"
+        : `los ${nombre.endsWith("s") ? nombre : `${nombre}s`}`;
     const frecuencia =
       r.intervalo > 1
         ? `cada ${r.intervalo} semanas`
         : r.intervalo === 1
           ? "todas las semanas"
           : "";
-    return `Se repite ${frecuencia} los ${nombre}s`;
+    return `Se repite ${frecuencia} ${dias}`;
   }
   const frecuencia =
     r.intervalo > 1
