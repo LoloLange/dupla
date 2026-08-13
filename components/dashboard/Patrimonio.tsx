@@ -12,6 +12,10 @@ import {
   type RangoFecha,
 } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import {
+  BloquearScroll,
+  useContenidoScrollable,
+} from "@/components/BloquearScroll";
 
 type Saldo = { ARS: number; USD: number };
 type Cotizacion = {
@@ -72,6 +76,8 @@ export function Patrimonio({
   const monedaRef = useRef<MonedaSecundaria | null>(null);
   const oficialesRef = useRef<Cotizacion[] | null>(null);
   const dolaresRef = useRef<Cotizacion[] | null>(null);
+  const listaDolarRef = useRef<HTMLDivElement>(null);
+  useContenidoScrollable(listaDolarRef);
 
   useEffect(() => {
     if (cargadoRef.current) return;
@@ -375,12 +381,13 @@ export function Patrimonio({
 
                 {selectorAbierto && dolares && (
                   <>
-                    <div
-                      className="fixed inset-0 z-40 cursor-default"
+                    <BloquearScroll
+                      className="fixed inset-0 z-40 cursor-default [touch-action:none]"
                       onClick={() => setSelectorAbierto(false)}
-                      aria-hidden
+                      ariaHidden
                     />
                     <div
+                      ref={listaDolarRef}
                       role="listbox"
                       aria-label="Tipo de dólar"
                       className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-2xl anim-pop-in"

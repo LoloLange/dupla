@@ -9,6 +9,7 @@ import {
   formatMonto,
 } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { bloquearScrollPagina } from "@/lib/scroll";
 import { emojiDeMovimiento } from "@/lib/categorias";
 import {
   buscarLogo,
@@ -72,11 +73,8 @@ export function UltimosGastos({
 
   useEffect(() => {
     if (!confirmarBorrado) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    const desbloquear = bloquearScrollPagina();
+    return () => desbloquear();
   }, [confirmarBorrado]);
 
   useEffect(() => {
@@ -246,38 +244,38 @@ export function UltimosGastos({
   return (
     <>
       <section className="anim-fade-up w-full">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-display text-xl font-medium tracking-tight text-ink">
             Movimientos
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {onImportarExportar && (
               <button
                 type="button"
                 onClick={onImportarExportar}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium text-sub transition-colors hover:border-ink hover:bg-surface-2 hover:text-ink"
+                className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-line px-3 py-1.5 text-xs font-medium text-sub transition-colors hover:border-ink hover:bg-surface-2 hover:text-ink sm:px-3.5 sm:text-sm"
               >
                 <svg
                   viewBox="0 0 24 24"
-                  className="size-4"
+                  className="size-3.5 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
                 >
                   <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                Importar / Exportar
+                Importar/Exportar
               </button>
             )}
             {onAñadirManual && (
               <button
                 type="button"
                 onClick={onAñadirManual}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium text-sub transition-colors hover:border-ink hover:bg-surface-2 hover:text-ink"
+                className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-line px-3 py-1.5 text-xs font-medium text-sub transition-colors hover:border-ink hover:bg-surface-2 hover:text-ink sm:px-3.5 sm:text-sm"
               >
                 <svg
                   viewBox="0 0 24 24"
-                  className="size-4"
+                  className="size-3.5 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
@@ -390,7 +388,7 @@ export function UltimosGastos({
                       <div className="flex items-center gap-2">
                         <p
                           className={cn(
-                            "font-display text-lg font-semibold tracking-tight tabular-nums",
+                            "font-display text-base font-semibold tracking-tight tabular-nums sm:text-lg",
                             gasto.tipo === "ingreso"
                               ? "text-ok"
                               : gasto.moneda === "ARS"

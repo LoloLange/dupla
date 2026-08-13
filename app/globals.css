@@ -73,6 +73,7 @@
 html {
   color-scheme: dark;
   overflow-x: clip;
+  scrollbar-gutter: stable;
 }
 
 html[data-theme$="-dark"] {

@@ -4,30 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-
-function downscaleFoto(archivo: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const lector = new FileReader();
-    lector.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const MAX = 256;
-        const escala = Math.min(1, MAX / Math.max(img.width, img.height));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(img.width * escala));
-        canvas.height = Math.max(1, Math.round(img.height * escala));
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return reject(new Error("Sin canvas"));
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.85));
-      };
-      img.onerror = () => reject(new Error("Imagen inválida"));
-      img.src = String(lector.result);
-    };
-    lector.onerror = () => reject(new Error("No se pudo leer el archivo"));
-    lector.readAsDataURL(archivo);
-  });
-}
+import { RecorteFoto } from "@/components/dashboard/RecorteFoto";
 
 export function MenuPerfil() {
   const router = useRouter();
@@ -37,6 +14,7 @@ export function MenuPerfil() {
   const [nombreBorrador, setNombreBorrador] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recorteFoto, setRecorteFoto] = useState<File | null>(null);
   const cajaRef = useRef<HTMLDivElement>(null);
   const inputFotoRef = useRef<HTMLInputElement>(null);
 
@@ -80,18 +58,25 @@ export function MenuPerfil() {
   }, [nombreBorrador, actualizar]);
 
   const cambiarFoto = useCallback(
-    async (archivo: File) => {
+    (archivo: File) => {
       if (archivo.size > 5 * 1024 * 1024) {
         setError("La foto es demasiado grande (máx. 5 MB)");
         return;
       }
-      setGuardando(true);
       setError(null);
+      setRecorteFoto(archivo);
+    },
+    []
+  );
+
+  const aplicarRecorte = useCallback(
+    async (dataUrl: string) => {
+      setGuardando(true);
       try {
-        const fotoUrl = await downscaleFoto(archivo);
-        await actualizar({ foto_url: fotoUrl });
+        await actualizar({ foto_url: dataUrl });
+        setRecorteFoto(null);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo guardar la foto");
+        throw new Error(e instanceof Error ? e.message : "No se pudo guardar");
       } finally {
         setGuardando(false);
       }
@@ -203,7 +188,7 @@ export function MenuPerfil() {
               className="hidden"
               onChange={(e) => {
                 const archivo = e.target.files?.[0];
-                if (archivo) void cambiarFoto(archivo);
+                if (archivo) cambiarFoto(archivo);
                 e.target.value = "";
               }}
             />
@@ -235,6 +220,14 @@ export function MenuPerfil() {
             </p>
           )}
         </div>
+      )}
+
+      {recorteFoto && (
+        <RecorteFoto
+          archivo={recorteFoto}
+          onCancelar={() => setRecorteFoto(null)}
+          onAplicar={aplicarRecorte}
+        />
       )}
     </div>
   );

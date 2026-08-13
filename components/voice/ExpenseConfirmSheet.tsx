@@ -11,7 +11,12 @@ import type {
 import { esCategoriaDeTipo, categoriasDeTipo, MONEDAS } from "@/lib/types";
 import { cn, formatMonto } from "@/lib/utils";
 import { Checkmark } from "@/components/voice/Checkmark";
+import {
+  BloquearScroll,
+  useContenidoScrollable,
+} from "@/components/BloquearScroll";
 import { NOMBRES_DIAS_SEMANA } from "@/lib/recurrencia";
+import { bloquearScrollPagina } from "@/lib/scroll";
 
 type Fase = "edit" | "saving" | "done";
 
@@ -69,6 +74,8 @@ function DropdownOpciones({
 }) {
   const etiquetaActual =
     opciones.find((o) => o.valor === seleccionado)?.etiqueta ?? "Elegir";
+  const listaRef = useRef<HTMLDivElement>(null);
+  useContenidoScrollable(listaRef);
   return (
     <div className="relative">
       <button
@@ -95,12 +102,13 @@ function DropdownOpciones({
 
       {abierto && (
         <>
-          <div
-            className="fixed inset-0 z-40 cursor-default"
+          <BloquearScroll
+            className="fixed inset-0 z-40 cursor-default [touch-action:none]"
             onClick={onCerrar}
-            aria-hidden
+            ariaHidden
           />
           <div
+            ref={listaRef}
             role="listbox"
             aria-label={ariaLabel}
             className="absolute inset-x-0 bottom-full z-50 mb-2 max-h-56 overflow-y-auto rounded-2xl border border-line bg-surface p-1.5 shadow-2xl anim-pop-in"
@@ -198,7 +206,6 @@ export function ExpenseConfirmSheet({
   const [cerrando, setCerrando] = useState(false);
   const [arrastre, setArrastre] = useState(0);
   const [dragActivo, setDragActivo] = useState(false);
-  const [saliendoArrastre, setSaliendoArrastre] = useState(false);
   const dragInicioRef = useRef<number | null>(null);
   const arrastreRef = useRef(0);
 
@@ -285,31 +292,20 @@ export function ExpenseConfirmSheet({
     dragInicioRef.current = null;
     const desplazado = arrastreRef.current;
     arrastreRef.current = 0;
-    if (desplazado > 96) {
-      setSaliendoArrastre(true);
-      setDragActivo(false);
-      setArrastre(window.innerHeight);
-      window.setTimeout(() => {
-        setArrastre(0);
-        setSaliendoArrastre(false);
-        pedirSalir();
-      }, 320);
-    } else {
-      setDragActivo(false);
-      setArrastre(0);
-    }
+    setDragActivo(false);
+    setArrastre(0);
+    if (desplazado > 96) pedirSalir();
   }, [pedirSalir]);
 
   useEffect(() => {
     if (!abierto) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const desbloquear = bloquearScrollPagina();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && fase === "edit") pedirSalir();
     };
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
+      desbloquear();
       window.removeEventListener("keydown", onKey);
     };
   }, [abierto, fase, pedirSalir]);
@@ -391,7 +387,7 @@ export function ExpenseConfirmSheet({
       <div
         className={cn(
           "absolute inset-0 bg-black/60 backdrop-blur-sm",
-          cerrando || saliendoArrastre ? "anim-fade-out" : "anim-fade-in"
+          cerrando ? "anim-fade-out" : "anim-fade-in"
         )}
         onClick={() => fase === "edit" && pedirSalir()}
       />
@@ -405,7 +401,7 @@ export function ExpenseConfirmSheet({
       >
         <div
           className={cn(
-            "max-h-[92dvh] overflow-y-auto rounded-t-3xl border-t border-line bg-surface px-6 pb-8 pt-3 shadow-2xl no-scrollbar lg:max-h-none lg:overflow-visible lg:w-full lg:max-w-lg lg:rounded-3xl lg:border lg:px-8 lg:pb-9 lg:pt-6",
+            "max-h-[92dvh] overflow-y-auto overflow-x-hidden rounded-t-3xl border-t border-line bg-surface px-6 pb-8 pt-3 shadow-2xl no-scrollbar lg:max-h-none lg:overflow-visible lg:w-full lg:max-w-lg lg:rounded-3xl lg:border lg:px-8 lg:pb-9 lg:pt-6",
             cerrando ? "anim-sheet-down lg:anim-pop-out" : "anim-sheet-up lg:anim-pop-in"
           )}
         >
@@ -442,7 +438,7 @@ export function ExpenseConfirmSheet({
                       Dupla escuchó
                     </p>
                   )}
-                  <h2 className="font-display text-2xl font-medium tracking-tight text-ink">
+                  <h2 className="font-display text-xl font-medium tracking-tight text-ink sm:text-2xl">
                     {editando
                       ? "Editar movimiento"
                       : esManual
@@ -518,7 +514,7 @@ export function ExpenseConfirmSheet({
                 ))}
               </div>
 
-              <div className="mb-4 flex items-center gap-3">
+              <div className="mb-4 space-y-3">
                 <div className="flex flex-wrap rounded-2xl bg-surface-2 p-1.5">
                   {MONEDAS.map(({ codigo: m }) => (
                     <button
@@ -526,7 +522,7 @@ export function ExpenseConfirmSheet({
                       type="button"
                       onClick={() => setMoneda(m)}
                       className={cn(
-                        "cursor-pointer rounded-xl px-3 py-2 font-mono text-sm font-semibold transition-all",
+                        "flex-1 cursor-pointer whitespace-nowrap rounded-xl px-2 py-2 font-mono text-sm font-semibold transition-all",
                         moneda === m
                           ? m === "ARS"
                             ? "bg-ars text-white shadow"
@@ -543,7 +539,7 @@ export function ExpenseConfirmSheet({
                   onChange={(e) => setMonto(e.target.value)}
                   inputMode="decimal"
                   aria-label="Monto"
-                  className="w-full min-w-0 flex-1 rounded-2xl border border-line bg-surface-2 px-4 py-3 text-right font-display text-3xl font-semibold tracking-tight text-ink outline-none transition-colors focus:border-ars"
+                  className="w-full min-w-0 rounded-2xl border border-line bg-surface-2 px-4 py-3 text-right font-display text-2xl font-semibold tracking-tight text-ink outline-none transition-colors focus:border-ars sm:text-3xl"
                 />
               </div>
 
@@ -590,7 +586,7 @@ export function ExpenseConfirmSheet({
                   type="datetime-local"
                   value={fecha}
                   onChange={(e) => setFecha(e.target.value)}
-                  className="w-full rounded-2xl border border-line bg-surface-2 px-4 py-3 text-ink outline-none transition-colors focus:border-ars"
+                  className="w-full min-w-0 max-w-full rounded-2xl border border-line bg-surface-2 px-3 py-3 text-sm text-ink outline-none transition-colors focus:border-ars sm:px-4 sm:text-base [&::-webkit-date-and-time-value]:min-w-0 [&::-webkit-date-and-time-value]:text-sm sm:[&::-webkit-date-and-time-value]:text-base"
                 />
               </label>
 
@@ -776,7 +772,7 @@ export function ExpenseConfirmSheet({
                   type="button"
                   onClick={() => salir(onCancel)}
                   disabled={fase === "saving"}
-                  className="flex-1 cursor-pointer rounded-2xl border border-line py-2 font-medium text-sub transition-colors hover:bg-surface-2 hover:text-ink disabled:cursor-default disabled:opacity-50"
+                  className="flex-1 cursor-pointer rounded-2xl border border-line py-2 text-sm font-medium text-sub transition-colors hover:bg-surface-2 hover:text-ink disabled:cursor-default disabled:opacity-50"
                 >
                   Descartar
                 </button>
@@ -785,7 +781,7 @@ export function ExpenseConfirmSheet({
                   onClick={() => void guardar()}
                   disabled={!montoNumerico || fase === "saving"}
                   className={cn(
-                    "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-2xl py-2 font-semibold text-white shadow-lg transition-all hover:brightness-105 active:scale-[0.98] disabled:cursor-default disabled:opacity-50",
+                    "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-2xl py-2 text-sm font-semibold text-white shadow-lg transition-all hover:brightness-105 active:scale-[0.98] disabled:cursor-default disabled:opacity-50",
                     tipo === "ingreso"
                       ? "bg-ok shadow-ok/25"
                       : "bg-ars shadow-ars/25"
@@ -814,7 +810,7 @@ export function ExpenseConfirmSheet({
       </div>
 
       {pidiendoAlcance && (
-        <div className="absolute inset-0 z-50 grid place-items-center bg-black/60 px-6 backdrop-blur-sm anim-fade-in">
+        <BloquearScroll className="absolute inset-0 z-50 grid place-items-center bg-black/60 px-6 backdrop-blur-sm anim-fade-in [touch-action:none]">
           <div className="anim-pop-in w-full max-w-sm rounded-3xl border border-line bg-surface p-5 shadow-2xl">
             <h3 className="font-display text-xl font-medium tracking-tight text-ink">
               ¿Qué querés editar?
@@ -853,11 +849,11 @@ export function ExpenseConfirmSheet({
               </button>
             </div>
           </div>
-        </div>
+        </BloquearScroll>
       )}
 
       {pidiendoSalida && (
-        <div className="absolute inset-0 z-50 grid place-items-center bg-black/60 px-6 backdrop-blur-sm anim-fade-in">
+        <BloquearScroll className="absolute inset-0 z-50 grid place-items-center bg-black/60 px-6 backdrop-blur-sm anim-fade-in [touch-action:none]">
           <div className="anim-pop-in w-full max-w-sm rounded-3xl border border-line bg-surface p-5 shadow-2xl">
             <h3 className="font-display text-xl font-medium tracking-tight text-ink">
               ¿Guardar los cambios?
@@ -896,7 +892,7 @@ export function ExpenseConfirmSheet({
               </button>
             </div>
           </div>
-        </div>
+        </BloquearScroll>
       )}
     </div>
   );

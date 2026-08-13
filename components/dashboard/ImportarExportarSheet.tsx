@@ -13,6 +13,7 @@ import {
 } from "@/lib/archivos";
 import { MapeoImportacion } from "@/components/dashboard/MapeoImportacion";
 import { cn } from "@/lib/utils";
+import { bloquearScrollPagina } from "@/lib/scroll";
 
 type Modo = "importar" | "exportar";
 type Estado = "idle" | "analizando" | "mapeo" | "importando" | "exportando" | "resultado";
@@ -65,14 +66,13 @@ export function ImportarExportarSheet({
 
   useEffect(() => {
     if (!abierto) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const desbloquear = bloquearScrollPagina();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onCancel();
     };
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
+      desbloquear();
       window.removeEventListener("keydown", onKey);
     };
   }, [abierto, onCancel]);

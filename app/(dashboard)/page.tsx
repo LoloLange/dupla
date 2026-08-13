@@ -391,7 +391,7 @@ export default function DashboardPage() {
           tags: gasto.tags ?? [],
           comentario: gasto.comentario ?? "",
         },
-        clave: `editar-${gasto.id}`,
+        clave: `editar-${gasto.id}-${Date.now()}`,
       });
     },
     [grabadora],
@@ -536,7 +536,7 @@ export default function DashboardPage() {
                   })
                   .slice(1)}
             </p>
-            <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-ink lg:text-5xl">
+            <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl lg:text-5xl">
               {nombre ? `¡Hola, ${nombre}!` : "¿Qué gastaste hoy?"}
             </h1>
           </div>
@@ -621,6 +621,7 @@ export default function DashboardPage() {
       </main>
 
       <ExpenseConfirmSheet
+        key={sheet?.clave}
         abierto={!!sheet}
         gasto={sheet?.gasto ?? null}
         onConfirm={confirmarGasto}
