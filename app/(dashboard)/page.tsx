@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { useGastos } from "@/hooks/useGastos";
 import {
@@ -509,6 +510,25 @@ export default function DashboardPage() {
             <Logo className="w-14" />
           </div>
           <div className="flex items-center gap-2.5">
+            <Link
+              href="/estadisticas"
+              aria-label="Estadísticas"
+              className="grid size-10 cursor-pointer place-items-center rounded-full border border-line bg-surface text-sub shadow-sm transition-all hover:-translate-y-0.5 hover:text-ink active:scale-95"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="size-4.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 3v18h18M7 16l4-4 4 4 5-9"
+                />
+              </svg>
+            </Link>
             <ThemeToggle />
             <MenuPerfil />
           </div>

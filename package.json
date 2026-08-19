@@ -11,10 +11,12 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.2",
+    "html-to-image": "^1.11.13",
     "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "read-excel-file": "^9.3.10",
+    "recharts": "^3.10.1",
     "thinking-orbs": "^0.2.0",
     "write-excel-file": "^4.1.1",
     "zod": "^4.4.3"
